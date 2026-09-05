@@ -18,6 +18,11 @@ import {
 
 type AppSession = IronSession<{ user?: SessionUser }>;
 
+// Hash dummy untuk menyamakan timing jalur user-tidak-ada dengan jalur
+// bcrypt.compare (anti user-enumeration via latency).
+const DUMMY_BCRYPT_HASH =
+  "$2b$10$.6JGTZygDBkOSG/EhMryxOY6KAKi.akuaSj5p8D8K3KuaTr1V3/8a";
+
 // ─── Login ───────────────────────────────────────────────────────────────────
 
 export type LoginResult =
@@ -54,6 +59,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
     });
 
     if (!user || !user.isActive || !user.tenant.isActive) {
+      await bcrypt.compare(password, DUMMY_BCRYPT_HASH);
       return { success: false, error: "Email atau password salah." };
     }
 

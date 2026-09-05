@@ -560,23 +560,23 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<SalesAct
         },
       });
 
-      // Line items (immutable after insert)
-      for (const item of enrichedItems) {
-        await tx.invoiceItem.create({
-          data: {
-            invoiceId: inv.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            discount: item.discount,
-            subtotal: item.subtotal,
-            hpp: item.hpp,
-            tenantId,
-            contractPriceId: item.contractPriceId,
-            priceSource: item.priceSource,
-          },
-        });
-      }
+      // Line items (immutable after insert) — satu createMany, bukan N create:
+      // ownership-assert extension mem-batch cek productId dan insert
+      // memperpendek serializable tx untuk invoice besar.
+      await tx.invoiceItem.createMany({
+        data: enrichedItems.map((item) => ({
+          invoiceId: inv.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discount: item.discount,
+          subtotal: item.subtotal,
+          hpp: item.hpp,
+          tenantId,
+          contractPriceId: item.contractPriceId,
+          priceSource: item.priceSource,
+        })),
+      });
 
       const isWalkInHandover = parsed.salesChannel === "WALK_IN" && parsed.status === "PAID";
       if (isWalkInHandover) {

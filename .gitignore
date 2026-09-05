@@ -27,6 +27,12 @@
 .DS_Store
 *.pem
 
+# Husky 9 regenerates this dir on install; only the hooks are source
+/.husky/_/
+
+# Runtime local-storage upload fallback (user content, never source)
+/public/uploads/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

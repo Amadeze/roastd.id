@@ -80,7 +80,12 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm prisma generate
+      - name: Release gates unavailable (secrets not configured)
+        if: ${{ secrets.DATABASE_URL == '' }}
+        run: |
+          echo "::warning::Release gates skipped: the DATABASE_URL Actions secret is not configured. Add the production secrets (DATABASE_URL, DIRECT_URL, SESSION_SECRET, CREDENTIAL_ENCRYPTION_KEY, APP_URL, CRON_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET, SUPABASE_PRIVATE_STORAGE_BUCKET) to activate preflight + audits."
       - name: Production preflight
+        if: ${{ secrets.DATABASE_URL != '' }}
         run: pnpm preflight:production
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -90,19 +95,23 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Tenant isolation audit
+        if: ${{ secrets.DATABASE_URL != '' }}
         run: pnpm audit:tenant-isolation
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Stock audit
+        if: ${{ secrets.DATABASE_URL != '' }}
         run: pnpm audit:stock
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Data integrity audit
+        if: ${{ secrets.DATABASE_URL != '' }}
         run: pnpm audit:integrity
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

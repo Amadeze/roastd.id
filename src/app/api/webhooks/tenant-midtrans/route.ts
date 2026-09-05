@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     // Find the invoice to get the tenant's Server Key
     const invoice = await prisma.invoice.findUnique({
       where: { midtransOrderId: orderId },
-      include: { tenant: true, customer: { select: { name: true } } }
+      include: { tenant: { select: { code: true, midtransServerKey: true } }, customer: { select: { name: true } } }
     });
 
     if (!invoice) {

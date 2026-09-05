@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { roastedBeanName, type RoastLevelValue } from "@/lib/roast-product";
 import { coffeeSourceCreateDataFromProduct, normalizeCoffeeIdentity, type CoffeeIdentityInput } from "@/lib/coffee-identity";
 import {
   customerInputSchema,
@@ -1672,77 +1671,6 @@ export async function updateSupplyItem(input: UpdateSupplyItemInput): Promise<Ac
   } catch (err) {
     console.error("[updateSupplyItem]", err);
     return { success: false, error: "Gagal memperbarui persediaan non-kopi." };
-  }
-}
-
-// =============================================================================
-// RENAME RB PRODUCTS — One-time fix for naming ambiguity
-// =============================================================================
-
-export async function renameRbProducts(): Promise<{ success: boolean; renamed: number; skipped: number; error?: string }> {
-  try {
-    await requireRole("OWNER");
-    const tenantId = await getCurrentTenantId();
-    const tp = await requireTenantPrisma();
-
-    // Find all RB products that don't have "·" in their name (not following convention)
-    const rbProducts = await tp.product.findMany({
-      where: {
-        type: "ROASTED_BEAN",
-        isActive: true,
-        name: { contains: "·" },
-      },
-      select: { id: true, name: true },
-    });
-    const alreadyCorrect = rbProducts.length;
-
-    const needsRename = await tp.product.findMany({
-      where: {
-        type: "ROASTED_BEAN",
-        isActive: true,
-        NOT: { name: { contains: "·" } },
-      },
-      select: { id: true, name: true, roastLevel: true, sourceGreenBeanId: true },
-    });
-
-    let renamed = 0;
-    let skipped = 0;
-
-    for (const rb of needsRename) {
-      if (!rb.sourceGreenBeanId || !rb.roastLevel) {
-        skipped++;
-        continue;
-      }
-      const gb = await tp.product.findUnique({
-        where: { id: rb.sourceGreenBeanId },
-        select: { name: true },
-      });
-      if (!gb) {
-        skipped++;
-        continue;
-      }
-      const newName = roastedBeanName(gb.name, rb.roastLevel as RoastLevelValue);
-      // Skip if the generated name already exists for another product
-      const existing = await tp.product.findFirst({
-        where: { id: { not: rb.id }, name: newName, type: "ROASTED_BEAN" },
-        select: { id: true },
-      });
-      if (existing) {
-        skipped++;
-        continue;
-      }
-      await tp.product.update({ where: { id: rb.id }, data: { name: newName } });
-      renamed++;
-    }
-
-    revalidatePath("/master-data");
-    revalidatePath("/roasting");
-    revalidatePath("/produksi");
-    revalidatePath("/inventory");
-    return { success: true, renamed, skipped };
-  } catch (err) {
-    console.error("[renameRbProducts]", err);
-    return { success: false, renamed: 0, skipped: 0, error: err instanceof Error ? err.message : "Gagal merename produk." };
   }
 }
 

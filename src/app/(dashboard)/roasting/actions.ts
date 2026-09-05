@@ -339,6 +339,7 @@ export type DownstreamBatchRecord = {
 // Consumed by the batch list (fetchBatchHistory) and the recap page.
 // Tenant-scoped via requireTenantPrisma.
 export async function fetchDownstreamBatches(batchIds: string[]): Promise<DownstreamBatchRecord[]> {
+  await requireRole("OWNER", "MANAGER", "OPERATOR");
   if (batchIds.length === 0) return [];
   const tp = await requireTenantPrisma();
   const [production, grinding, experimental] = await Promise.all([
@@ -494,6 +495,7 @@ async function fetchBatchHistory(): Promise<ParentRoastingBatchRow[]> {
 }
 
 export async function fetchMachineOptions(): Promise<MachineOption[]> {
+  await requireRole("OWNER", "MANAGER", "OPERATOR");
   const tp = await requireTenantPrisma();
   const machines = await tp.machine.findMany({
     where: { isActive: true },
@@ -517,6 +519,7 @@ export async function getMachineOptions(): Promise<MachineOption[]> {
 // =============================================================================
 
 export async function fetchRoastingLocationOptions(): Promise<RoastingLocationOption[]> {
+  await requireRole("OWNER", "MANAGER", "OPERATOR");
   return fetchInventoryLocationOptions(await requireTenantPrisma());
 }
 

@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
     <AuthFrame
       eyebrow="Keamanan akun"
       title="Tetapkan kunci akses baru."
-      description="Gunakan minimal delapan karakter yang unik dan belum pernah dipakai untuk akun ini."
+            description="Gunakan minimal 8 karakter dengan satu huruf kapital dan satu angka."
       asideTitle="Identitas operasional, dijaga."
       asideDescription="Akses akun dipulihkan tanpa menghapus histori transaksi, roast profile, atau catatan audit."
       footer={(

@@ -641,6 +641,8 @@ model SubscriptionPayment {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([status])
+  @@index([createdAt])
   @@map("subscription_payments")
 }
 

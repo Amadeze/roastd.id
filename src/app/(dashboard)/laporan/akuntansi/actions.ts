@@ -621,29 +621,45 @@ export async function getPerubahanEkuitas(
     ? { journalEntry: { date: { lt: dateToLocalRange(fromDate, timezone).start } } }
     : {};
 
+  if (equityAccounts.length === 0) return [];
+
+  // Dua groupBy menggantikan 2 aggregate per akun (N+1) pada statement ekuitas.
+  const accountIds = equityAccounts.map((a) => a.id);
+  const [openingGroups, periodGroups] = await Promise.all([
+    tp.journalLine.groupBy({
+      by: ["accountId"],
+      where: { accountId: { in: accountIds }, ...beforeFilter },
+      _sum: { credit: true, debit: true },
+    }),
+    tp.journalLine.groupBy({
+      by: ["accountId"],
+      where: { accountId: { in: accountIds }, ...dateFilter },
+      _sum: { credit: true, debit: true },
+    }),
+  ]);
+  const openingByAccount = new Map(
+    openingGroups.map((g) => [
+      g.accountId,
+      Number(g._sum.credit ?? 0) - Number(g._sum.debit ?? 0),
+    ]),
+  );
+  const periodByAccount = new Map(
+    periodGroups.map((g) => [
+      g.accountId,
+      { credit: Number(g._sum.credit ?? 0), debit: Number(g._sum.debit ?? 0) },
+    ]),
+  );
+
   const results: PerubahanEkuitasRow[] = [];
   for (const acct of equityAccounts) {
-    const openingAgg = await tp.journalLine.aggregate({
-      where: { accountId: acct.id, ...beforeFilter },
-      _sum: { credit: true, debit: true },
-    });
-    const opening =
-      Number(openingAgg._sum.credit ?? 0) -
-      Number(openingAgg._sum.debit ?? 0);
-
-    const periodAgg = await tp.journalLine.aggregate({
-      where: { accountId: acct.id, ...dateFilter },
-      _sum: { credit: true, debit: true },
-    });
-    const periodCredit = Number(periodAgg._sum.credit ?? 0);
-    const periodDebit = Number(periodAgg._sum.debit ?? 0);
-
+    const opening = openingByAccount.get(acct.id) ?? 0;
+    const period = periodByAccount.get(acct.id) ?? { credit: 0, debit: 0 };
     results.push({
       component: acct.name,
       openingBalance: opening,
-      addition: periodCredit,
-      deduction: periodDebit,
-      closingBalance: opening + periodCredit - periodDebit,
+      addition: period.credit,
+      deduction: period.debit,
+      closingBalance: opening + period.credit - period.debit,
     });
   }
 
@@ -669,29 +685,43 @@ export async function getGlIntegrityCheck(): Promise<GlIntegrityIssue[]> {
   const tp = await requireTenantPrisma();
   const issues: GlIntegrityIssue[] = [];
 
-  // Check 1: Unbalanced journal entries
-  const entries = await tp.journalEntry.findMany({
-    include: {
-      lines: { select: { debit: true, credit: true } },
-    },
+  // Check 1: Unbalanced journal entries — dihitung di SQL (groupBy) agar tidak
+  // memuat seluruh jurnal ke memori dan tidak terpotong default take findMany.
+  const tenantId = await getCurrentTenantId();
+  const lineGroups = await tp.journalLine.groupBy({
+    by: ["journalEntryId"],
+    where: { journalEntry: { tenantId } },
+    _sum: { debit: true, credit: true },
   });
+  const sumByEntry = new Map(lineGroups.map((g) => [g.journalEntryId, g]));
+  const unbalancedIds = lineGroups
+    .filter((g) => Math.abs(Number(g._sum.debit ?? 0) - Number(g._sum.credit ?? 0)) > 0.01)
+    .map((g) => g.journalEntryId);
+  const unbalancedEntries = unbalancedIds.length > 0
+    ? await tp.journalEntry.findMany({
+        where: { id: { in: unbalancedIds } },
+        select: { id: true, code: true },
+      })
+    : [];
 
-  for (const entry of entries) {
-    const totalDebit = entry.lines.reduce((s, l) => s + Number(l.debit), 0);
-    const totalCredit = entry.lines.reduce((s, l) => s + Number(l.credit), 0);
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      issues.push({
-        severity: "ERROR",
-        category: "UNBALANCED_ENTRY",
-        message: `Jurnal ${entry.code} tidak balance`,
-        detail: `Debit: ${totalDebit}, Kredit: ${totalCredit}, Selisih: ${(totalDebit - totalCredit).toFixed(2)}`,
-        entryCode: entry.code,
-      });
-    }
+  for (const entry of unbalancedEntries) {
+    const g = sumByEntry.get(entry.id)!;
+    const totalDebit = Number(g._sum.debit ?? 0);
+    const totalCredit = Number(g._sum.credit ?? 0);
+    issues.push({
+      severity: "ERROR",
+      category: "UNBALANCED_ENTRY",
+      message: `Jurnal ${entry.code} tidak balance`,
+      detail: `Debit: ${totalDebit}, Kredit: ${totalCredit}, Selisih: ${(totalDebit - totalCredit).toFixed(2)}`,
+      entryCode: entry.code,
+    });
   }
 
   // Check 2: Entries without lines
-  const emptyEntries = entries.filter((e) => e.lines.length === 0);
+  const emptyEntries = await tp.journalEntry.findMany({
+    where: { lines: { none: {} } },
+    select: { code: true },
+  });
   for (const e of emptyEntries) {
     issues.push({
       severity: "ERROR",

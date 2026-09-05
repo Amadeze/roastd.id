@@ -1444,15 +1444,17 @@ export async function adjustStock(input: {
 
     const refId = input.operationKey || "OPNAME-" + randomBytes(6).toString("hex").toUpperCase();
 
-    if (input.operationKey) {
-      const existing = await (await requireTenantPrisma()).inventoryLedger.findFirst({
-        where: { refId: input.operationKey, refType: { in: ["ADJUSTMENT_IN", "ADJUSTMENT_OUT"] } },
-        select: { id: true },
-      });
-      if (existing) return { success: true };
-    }
-
     await (await requireTenantPrisma()).$transaction(async (tx) => {
+      // Cek idempotensi harus di dalam tx Serializable agar dua retry
+      // konkuren dengan operationKey sama tidak lolos bersamaan.
+      if (input.operationKey) {
+        const existing = await tx.inventoryLedger.findFirst({
+          where: { refId: input.operationKey, refType: { in: ["ADJUSTMENT_IN", "ADJUSTMENT_OUT"] } },
+          select: { id: true },
+        });
+        if (existing) return;
+      }
+
       let qtyKg: number | null = null;
       let qtyUnit: number | null = null;
       let unitCost = 0;

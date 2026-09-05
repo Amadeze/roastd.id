@@ -192,7 +192,7 @@ export async function POST(
     // 1. Dapatkan tenant
     const tenant = await prisma.tenant.findUnique({
       where: { subdomain },
-      include: { users: { take: 1, orderBy: { createdAt: 'asc' } } }
+      include: { users: { take: 1, orderBy: { createdAt: 'asc' }, select: { id: true } } }
     });
 
     if (
