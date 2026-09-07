@@ -160,12 +160,11 @@ export async function registerTenant(data: {
     console.error("Registration error:", error);
     return {
       success: false,
+      // Jangan bocorkan error internal (Prisma/env) ke klien.
       error:
         error instanceof RateLimitError
           ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Something went wrong",
+          : "Something went wrong. Please try again.",
     };
   }
 }
@@ -280,12 +279,11 @@ export async function registerTenantWithGoogle(data: {
     console.error("Google Registration error:", error);
     return {
       success: false,
+      // Jangan bocorkan error internal (Prisma/env) ke klien.
       error:
         error instanceof RateLimitError
           ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Something went wrong",
+          : "Something went wrong. Please try again.",
     };
   }
 }

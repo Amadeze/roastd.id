@@ -44,6 +44,7 @@ function buildMockPrisma(overrides: {
         quantityUnit: 0,
         supplyItemId: null,
         productId: "prod-1",
+        product: { type: "GREEN_BEAN" },
         packagingId: null,
       }),
     },
@@ -58,7 +59,8 @@ function buildMockPrisma(overrides: {
     },
     lotPlacement: {
       findFirst: vi.fn().mockResolvedValue(sourcePlacement),
-      update: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue(sourcePlacement),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       upsert: vi.fn().mockResolvedValue({}),
     },
     locationTransfer: {
@@ -87,7 +89,7 @@ describe("transferLot", () => {
 
     expect(result.success).toBe(false);
     expect((result as any).error).toContain("Lokasi sistem dikelola otomatis");
-    expect(tx.lotPlacement.update).not.toHaveBeenCalled();
+    expect(tx.lotPlacement.updateMany).not.toHaveBeenCalled();
     expect(tx.lotPlacement.upsert).not.toHaveBeenCalled();
     expect(tx.locationTransfer.create).not.toHaveBeenCalled();
   });
@@ -105,7 +107,7 @@ describe("transferLot", () => {
 
     expect(result.success).toBe(false);
     expect((result as any).error).toContain("Lokasi sistem dikelola otomatis");
-    expect(tx.lotPlacement.update).not.toHaveBeenCalled();
+    expect(tx.lotPlacement.updateMany).not.toHaveBeenCalled();
     expect(tx.locationTransfer.create).not.toHaveBeenCalled();
   });
 
@@ -122,9 +124,25 @@ describe("transferLot", () => {
 
     expect(result.success).toBe(true);
     expect((result as any).transferId).toBe("transfer-1");
-    expect(tx.lotPlacement.update).toHaveBeenCalled();
+    expect(tx.lotPlacement.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ quantityKg: { gte: 10 } }),
+    }));
     expect(tx.lotPlacement.upsert).toHaveBeenCalled();
     expect(tx.locationTransfer.create).toHaveBeenCalled();
+  });
+
+  it("rejects a concurrent transfer that depleted the source placement", async () => {
+    const { prisma, tx } = buildMockPrisma();
+    tx.lotPlacement.updateMany.mockResolvedValue({ count: 0 });
+    tx.lotPlacement.findUnique.mockResolvedValue({ quantityKg: 5, quantityUnit: 0, supplyQty: 0 });
+    (requireTenantPrisma as any).mockResolvedValue(prisma);
+
+    const result = await transferLot({
+      lotId: "lot-1", sourceLocationId: "src-1", destinationLocationId: "dst-1", quantityKg: 10,
+    });
+
+    expect(result).toEqual({ success: false, error: "Stok kg di lokasi sumber tidak mencukupi." });
+    expect(tx.lotPlacement.upsert).not.toHaveBeenCalled();
   });
 
   it("keeps rejecting identical source and destination", async () => {

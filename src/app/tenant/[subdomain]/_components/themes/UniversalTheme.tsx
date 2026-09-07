@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Coffee, Package, Phone, X, CheckCircle } from "@phosphor-icons/react";
+import { Coffee, Loader2, Package, Phone, X, CheckCircle2 } from "lucide-react";
 import { ThemeProps } from "./ThemeProps";
 import { useCallback, useState } from "react";
 import type { StorefrontOffering } from "@/lib/storefront-grind";
@@ -83,7 +83,7 @@ export function UniversalTheme({
           className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-full bg-amber-500 text-gray-950 font-bold shadow-2xl hover:scale-105 active:scale-95 transition-all border border-amber-300/40"
         >
           <div className="relative">
-            <Coffee size={22} weight="bold" />
+            <Coffee size={22} strokeWidth={2.5} />
           </div>
           <span>Keranjang ({cartItems.reduce((acc: number, item: any) => acc + item.quantity, 0)})</span>
           <span className="bg-gray-950 text-white text-xs px-2 py-0.5 rounded-full">
@@ -127,7 +127,7 @@ export function UniversalTheme({
                   aria-label="Tutup keranjang"
                   className="w-9 h-9 rounded-[var(--portal-radius)] flex items-center justify-center transition-all hover:bg-[var(--portal-bg)] text-[var(--portal-text-muted)]"
                 >
-                  <X size={16} weight="bold" />
+                  <X size={16} strokeWidth={2.5} />
                 </button>
               </div>
 
@@ -369,7 +369,7 @@ export function UniversalTheme({
                     disabled={isCheckingOut}
                     className="w-full py-4 rounded-[var(--portal-radius)] font-bold text-base transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 bg-[var(--portal-primary)] text-[var(--portal-bg)] shadow-lg disabled:cursor-wait disabled:opacity-60"
                   >
-                    <Phone size={18} weight="bold" />
+                    <Phone size={18} strokeWidth={2.5} />
                     {isCheckingOut ? "Memproses Pesanan..." : tenant.paymentMethods?.length ? "Lanjut ke Konfirmasi" : "Checkout Sekarang"}
                   </button>
                 </div>
@@ -398,7 +398,7 @@ export function UniversalTheme({
                   >
                     <div className="mb-4 text-center">
                       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--portal-primary)]/10 text-[var(--portal-primary)]">
-                        <CheckCircle size={32} weight="fill" />
+                        <CheckCircle2 size={32} fill="currentColor" />
                       </div>
                       <h3 id="storefront-confirmation-title" className="text-xl font-bold">Konfirmasi Pesanan</h3>
                       <p className="mt-2 text-sm text-[var(--portal-text-muted)]">
@@ -474,7 +474,7 @@ export function UniversalTheme({
                         disabled={isCheckingOut}
                         className="w-1/2 rounded-[var(--portal-radius)] bg-[var(--portal-primary)] py-3 font-bold text-[var(--portal-bg)] transition-transform hover:scale-[1.02] active:scale-[0.95] disabled:cursor-wait disabled:opacity-70 flex justify-center"
                       >
-                        {isCheckingOut ? <Phone className="animate-spin" size={20} /> : "Konfirmasi"}
+                        {isCheckingOut ? <Loader2 className="animate-spin" size={20} /> : "Konfirmasi"}
                       </button>
                     </div>
                   </motion.div>

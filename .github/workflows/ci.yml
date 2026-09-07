@@ -69,6 +69,9 @@ jobs:
     name: Release gates (preflight + audits)
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test, build]
+    env:
+      # secrets context is not available in step-level if; branch on this env flag instead
+      HAS_DATABASE_SECRET: ${{ secrets.DATABASE_URL != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -80,7 +83,12 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm prisma generate
+      - name: Release gates unavailable (secrets not configured)
+        if: env.HAS_DATABASE_SECRET != 'true'
+        run: |
+          echo "::warning::Release gates skipped: the DATABASE_URL Actions secret is not configured. Add the production secrets (DATABASE_URL, DIRECT_URL, SESSION_SECRET, CREDENTIAL_ENCRYPTION_KEY, APP_URL, CRON_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET, SUPABASE_PRIVATE_STORAGE_BUCKET) to activate preflight + audits."
       - name: Production preflight
+        if: env.HAS_DATABASE_SECRET == 'true'
         run: pnpm preflight:production
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -90,19 +98,23 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Tenant isolation audit
+        if: env.HAS_DATABASE_SECRET == 'true'
         run: pnpm audit:tenant-isolation
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Stock audit
+        if: env.HAS_DATABASE_SECRET == 'true'
         run: pnpm audit:stock
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
       - name: Data integrity audit
+        if: env.HAS_DATABASE_SECRET == 'true'
         run: pnpm audit:integrity
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

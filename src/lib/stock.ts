@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { requireTenantPrisma } from "./auth";
 
 // Use a flexible type that works with both base and tenant-scoped Prisma clients
@@ -31,6 +33,15 @@ type FefoLedgerEntryData = Omit<
   "entryType" | "incomingPrice" | "lotNumber" | "expiryDate" | "lotId"
 > & {
   tenantId: string;
+};
+
+type FefoLot = {
+  id: string;
+  batchCode: string;
+  expiryDate: Date | null;
+  quantityKg: FlexibleNumber;
+  quantityUnit: FlexibleNumber;
+  supplyQuantity: FlexibleNumber;
 };
 
 type PlacementQuantityField = "quantityKg" | "quantityUnit" | "supplyQty";
@@ -168,6 +179,8 @@ export async function appendLedger(tx: TransactionClient, data: LedgerEntryData 
   if (isInbound && payload.incomingPrice !== undefined) {
     const incPrice = Number(payload.incomingPrice);
     if (payload.productId) {
+      // The cache read and WAC write must serialize across concurrent receipts.
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "products" WHERE "id" = ${payload.productId} FOR UPDATE`);
       const product = await tx.product.findUnique({
         where: { id: payload.productId },
         select: { stockKg: true, stockUnit: true, avgCostPerKg: true, lastHpp: true },
@@ -186,6 +199,7 @@ export async function appendLedger(tx: TransactionClient, data: LedgerEntryData 
         newLastHppUnit = (oldUnit * oldHpp + quantityUnit * incPrice) / (oldUnit + quantityUnit);
       }
     } else if (payload.packagingId) {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "packagings" WHERE "id" = ${payload.packagingId} FOR UPDATE`);
       const pkg = await tx.packaging.findUnique({
         where: { id: payload.packagingId },
         select: { stockUnit: true, avgCostPerUnit: true },
@@ -196,6 +210,7 @@ export async function appendLedger(tx: TransactionClient, data: LedgerEntryData 
         newAvgCostUnit = (oldStock * oldAvg + quantityUnit * incPrice) / (oldStock + quantityUnit);
       }
     } else if (isSupply) {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "inventory_supply_items" WHERE "id" = ${payload.supplyItemId} FOR UPDATE`);
       const item = await tx.inventorySupplyItem.findUnique({
         where: { id: payload.supplyItemId },
         select: { tenantId: true, stockQuantity: true, avgCostPerUnit: true },
@@ -632,7 +647,7 @@ export async function appendFefoLedgerOut(tx: TransactionClient, data: FefoLedge
       FOR UPDATE
     `;
 
-    let lots;
+    let lots: FefoLot[];
     if (lockedLotIds.length > 0) {
       lots = await tx.lot.findMany({
         where: {
@@ -656,18 +671,45 @@ export async function appendFefoLedgerOut(tx: TransactionClient, data: FefoLedge
           quantityKg: true,
           quantityUnit: true,
           supplyQuantity: true,
-          inventoryLedgers: {
-            select: {
-              entryType: true,
-              quantityKg: true,
-              quantityUnit: true,
-              supplyQuantity: true,
-            },
-          },
         },
       });
     } else {
       lots = [];
+    }
+
+    // Saldo ledger per lot dihitung dengan SATU groupBy (±2 baris per lot)
+    // alih-alih memuat seluruh riwayat ledger tiap lot ke JS. Pertahankan
+    // aturan lama: baris reversal tidak ikut menentukan saldo FEFO.
+    const ledgerAgg = new Map<string, { count: number; inQty: number; outQty: number }>();
+    if (lots.length > 0) {
+      const grouped = await tx.inventoryLedger.groupBy({
+        by: ["lotId", "entryType"],
+        where: {
+          tenantId: data.tenantId,
+          lotId: { in: lots.map((lot) => lot.id) },
+          NOT: [
+            { refType: "VOID_REVERSAL" },
+            { reversalOfLedgerId: { not: null } },
+          ],
+        },
+        _sum: { quantityKg: true, quantityUnit: true, supplyQuantity: true },
+        _count: { _all: true },
+      });
+      for (const row of grouped) {
+        const lotId = row.lotId as string;
+        let agg = ledgerAgg.get(lotId);
+        if (!agg) {
+          agg = { count: 0, inQty: 0, outQty: 0 };
+          ledgerAgg.set(lotId, agg);
+        }
+        agg.count += row._count._all;
+        const amount = Number(row._sum[quantityField] ?? 0);
+        if (row.entryType === "IN") {
+          agg.inQty += amount;
+        } else {
+          agg.outQty += amount;
+        }
+      }
     }
 
     let remaining = requestedQuantity;
@@ -678,24 +720,10 @@ export async function appendFefoLedgerOut(tx: TransactionClient, data: FefoLedge
       if (remaining <= epsilon) break;
 
       const originalQuantity = Number(lot[quantityField] ?? 0);
-      const ledgerBalance = lot.inventoryLedgers.reduce(
-        (balance: number, entry: {
-          entryType: "IN" | "OUT";
-          quantityKg: FlexibleNumber;
-          quantityUnit: FlexibleNumber;
-          supplyQuantity: FlexibleNumber;
-          refType: string;
-          reversalOfLedgerId: string | null;
-        }) => {
-          if (entry.refType === "VOID_REVERSAL" || entry.reversalOfLedgerId != null) return balance;
-          const amount = Number(entry[quantityField] ?? 0);
-          return balance + (entry.entryType === "IN" ? amount : -amount);
-        },
-        0,
-      );
+      const agg = ledgerAgg.get(lot.id);
       const available = Math.max(
         0,
-        lot.inventoryLedgers.length > 0 ? ledgerBalance : originalQuantity,
+        agg && agg.count > 0 ? agg.inQty - agg.outQty : originalQuantity,
       );
       if (available <= epsilon) continue;
 

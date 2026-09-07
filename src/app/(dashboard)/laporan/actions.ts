@@ -158,7 +158,9 @@ const getInventoryValuationCore = unstable_cache(
   async (tenantId: string, asOfIso: string): Promise<InventoryValuationReport> => {
     const tp = withTenant(tenantId);
     const asOf = new Date(asOfIso);
-  const products = await tp.product.findMany({
+  // Lima read independen — paralel, bukan lima round-trip sekuensial.
+  const [products, roasts, supplyItems, allPackaging, sampleComponents] = await Promise.all([
+  tp.product.findMany({
     where: { isActive: true },
     include: {
       purchases: {
@@ -204,9 +206,8 @@ const getInventoryValuationCore = unstable_cache(
       },
     },
     orderBy: [{ type: "asc" }, { name: "asc" }],
-  });
-
-  const roasts = await tp.parentRoastingBatch.findMany({
+  }),
+  tp.parentRoastingBatch.findMany({
     where: {
       status: { in: ["COMPLETED", "VOID"] },
       AND: [{ OR: [{ voidAt: null }, { voidAt: { gt: asOf } }] }],
@@ -221,7 +222,31 @@ const getInventoryValuationCore = unstable_cache(
       targetWeightKg: true,
       actualOutputKg: true,
     },
-  });
+  }),
+  tp.inventorySupplyItem.findMany({
+    select: {
+      id: true,
+      avgCostPerUnit: true,
+      costPerUnit: true,
+      packaging: { select: { id: true } },
+    },
+  }),
+  tp.packaging.findMany({
+    select: { id: true, costPerUnit: true, supplyItemId: true },
+  }),
+  tp.sampleUsageComponent.findMany({
+    where: {
+      sampleUsage: { status: "COMPLETED", givenAt: { lte: asOf } },
+    },
+    select: {
+      productId: true,
+      packagingId: true,
+      quantityKg: true,
+      quantityUnit: true,
+      unitCost: true,
+    },
+  }),
+  ]);
 
   const greenBeanCost = new Map<string, number>();
   for (const product of products.filter((row) => row.type === "GREEN_BEAN")) {
@@ -250,14 +275,6 @@ const getInventoryValuationCore = unstable_cache(
   const packagingMap = new Map<string, number>();
   const supplyCostMap = new Map<string, number>();
   const packagingSupplyItemByPackagingId = new Map<string, string>();
-  const supplyItems = await tp.inventorySupplyItem.findMany({
-    select: {
-      id: true,
-      avgCostPerUnit: true,
-      costPerUnit: true,
-      packaging: { select: { id: true } },
-    },
-  });
   for (const item of supplyItems) {
     const cost = Number(item.avgCostPerUnit ?? 0) || Number(item.costPerUnit ?? 0);
     supplyCostMap.set(item.id, cost);
@@ -266,27 +283,10 @@ const getInventoryValuationCore = unstable_cache(
       packagingMap.set(item.packaging.id, cost);
     }
   }
-  const allPackaging = await tp.packaging.findMany({
-    select: { id: true, costPerUnit: true, supplyItemId: true },
-  });
   for (const pkg of allPackaging) {
     if (pkg.supplyItemId) continue; // mapped → cost canonical sudah masuk via supply item
     packagingMap.set(pkg.id, Number(pkg.costPerUnit));
   }
-
-  // Compute sample write-off per item from completed samples in the period
-  const sampleComponents = await tp.sampleUsageComponent.findMany({
-    where: {
-      sampleUsage: { status: "COMPLETED", givenAt: { lte: asOf } },
-    },
-    select: {
-      productId: true,
-      packagingId: true,
-      quantityKg: true,
-      quantityUnit: true,
-      unitCost: true,
-    },
-  });
 
   const sampleWriteOffMap = new Map<string, number>();
   for (const comp of sampleComponents) {
@@ -541,7 +541,7 @@ export async function getBalanceSheetReport(
   const accountIds = accounts.map((a) => a.id);
 
   const lineGroups = accountIds.length > 0
-    ? await prisma.journalLine.groupBy({
+    ? await tp.journalLine.groupBy({
         by: ["accountId"],
         where: { accountId: { in: accountIds }, journalEntry: { tenantId } },
         _sum: { debit: true, credit: true },

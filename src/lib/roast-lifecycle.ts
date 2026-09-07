@@ -40,6 +40,20 @@ export type RoastCompletionResult = {
   outcome: RoastOutcome;
 };
 
+type ChargedReservation = {
+  id: string;
+  lotId: string;
+  sourceLocationId: string | null;
+  chargeTransferId: string | null;
+  quantityKg: { toNumber(): number } | number | string;
+};
+
+type ChargeTransfer = {
+  id: string;
+  lotId: string;
+  destinationLocationId: string;
+};
+
 function roundKg(value: number) {
   return Math.round(value * 1000) / 1000;
 }
@@ -664,34 +678,53 @@ export async function abortRoastInTx(
     throw new Error("Hanya batch CHARGED yang dapat di-abort.");
   }
 
-  const reservations = await tx.roastMaterialReservation.findMany({
+  const reservations: ChargedReservation[] = await tx.roastMaterialReservation.findMany({
     where: { tenantId: input.tenantId, parentBatchId: batch.id, status: "CHARGED" },
     orderBy: { createdAt: "asc" },
     include: { lot: { select: { batchCode: true, expiryDate: true } } },
   });
   if (reservations.length === 0) throw new Error("Reservation CHARGED untuk batch tidak ditemukan.");
 
+  // Batch lookup jejak transfer charge + lokasi sumber untuk semua reservation
+  // sekaligus — mengganti findFirst per reservation di dalam tx.
+  const chargeTransferIds = reservations
+    .map((reservation) => reservation.chargeTransferId)
+    .filter((transferId): transferId is string => Boolean(transferId));
+  const chargeTransfers: ChargeTransfer[] = chargeTransferIds.length > 0
+    ? await tx.locationTransfer.findMany({
+        where: { id: { in: chargeTransferIds }, tenantId: input.tenantId, status: "COMPLETED" },
+        select: { id: true, lotId: true, destinationLocationId: true },
+      })
+    : [];
+  const chargeTransferById = new Map(chargeTransfers.map((transfer) => [transfer.id, transfer]));
+
+  const recoverableSourceIds = input.mode === "RECOVERABLE"
+    ? Array.from(new Set(
+        reservations
+          .map((reservation) => reservation.sourceLocationId)
+          .filter((locationId): locationId is string => Boolean(locationId)),
+      ))
+    : [];
+  const activeSourceLocations: Array<{ id: string }> = recoverableSourceIds.length > 0
+    ? await tx.location.findMany({
+        where: { id: { in: recoverableSourceIds }, tenantId: input.tenantId, isActive: true },
+        select: { id: true },
+      })
+    : [];
+  const activeSourceLocationIds = new Set(activeSourceLocations.map((location) => location.id));
+
   for (const reservation of reservations) {
     const transfer = reservation.chargeTransferId
-      ? await tx.locationTransfer.findFirst({
-          where: {
-            id: reservation.chargeTransferId,
-            tenantId: input.tenantId,
-            lotId: reservation.lotId,
-            status: "COMPLETED",
-          },
-          select: { destinationLocationId: true },
-        })
+      ? chargeTransferById.get(reservation.chargeTransferId)
       : null;
-    if (!transfer) throw new Error("Jejak transfer charge untuk reservation tidak ditemukan.");
+    if (!transfer || transfer.lotId !== reservation.lotId) {
+      throw new Error("Jejak transfer charge untuk reservation tidak ditemukan.");
+    }
 
     if (input.mode === "RECOVERABLE") {
-      const original = await tx.location.findFirst({
-        where: { id: reservation.sourceLocationId, tenantId: input.tenantId, isActive: true },
-        select: { id: true },
-      });
-      const destinationId = original?.id
-        ?? await resolveOutputLocationInTx(tx, input.tenantId, null);
+      const destinationId = reservation.sourceLocationId != null && activeSourceLocationIds.has(reservation.sourceLocationId)
+        ? reservation.sourceLocationId
+        : await resolveOutputLocationInTx(tx, input.tenantId, null);
       await transferLotInTx(tx, {
         tenantId: input.tenantId,
         userId: input.userId,
@@ -704,15 +737,18 @@ export async function abortRoastInTx(
     } else {
       await consumeChargedReservationInTx(tx, input, batch, reservation, "ADJUSTMENT_OUT");
     }
-    await tx.roastMaterialReservation.update({
-      where: { id: reservation.id },
-      data: {
-        status: "RELEASED",
-        releasedAt: getCurrentDate(),
-        ...(input.mode === "SCRAP" ? { consumedAt: getCurrentDate() } : {}),
-      },
-    });
   }
+
+  // Data release identik untuk semua reservation dalam satu abort — satu
+  // updateMany menggantikan update per baris.
+  await tx.roastMaterialReservation.updateMany({
+    where: { id: { in: reservations.map((reservation) => reservation.id) } },
+    data: {
+      status: "RELEASED",
+      releasedAt: getCurrentDate(),
+      ...(input.mode === "SCRAP" ? { consumedAt: getCurrentDate() } : {}),
+    },
+  });
 
   if (input.mode === "SCRAP") {
     const quantityKg = reservations.reduce((sum: number, row: any) => sum + Number(row.quantityKg), 0);

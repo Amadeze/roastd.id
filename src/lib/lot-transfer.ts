@@ -83,7 +83,15 @@ export async function transferLot(data: {
     const transferId = await tp.$transaction(async (tx) => {
       const lot = await tx.lot.findUnique({
         where: { id: data.lotId, tenantId },
-        select: { quantityKg: true, quantityUnit: true, supplyItemId: true, productId: true, packagingId: true, consumedAt: true },
+        select: {
+          quantityKg: true,
+          quantityUnit: true,
+          supplyItemId: true,
+          productId: true,
+          packagingId: true,
+          consumedAt: true,
+          product: { select: { type: true } },
+        },
       });
       if (!lot) {
         throw new Error("LOT_NOT_FOUND");
@@ -94,11 +102,11 @@ export async function transferLot(data: {
 
       const [sourceLocation, destinationLocation] = await Promise.all([
         tx.location.findFirst({
-          where: { id: data.sourceLocationId, tenantId },
+          where: { id: data.sourceLocationId, tenantId, isActive: true, warehouse: { isActive: true } },
           select: { isSystem: true },
         }),
         tx.location.findFirst({
-          where: { id: data.destinationLocationId, tenantId },
+          where: { id: data.destinationLocationId, tenantId, isActive: true, warehouse: { isActive: true } },
           select: { isSystem: true },
         }),
       ]);
@@ -110,6 +118,15 @@ export async function transferLot(data: {
       }
       if (isSystemLocation(destinationLocation)) {
         throw new Error("SYS_LOCATION_DESTINATION");
+      }
+
+      const validDimension = lot.supplyItemId
+        ? qtySupply > 0 && qtyKg === 0 && qtyUnit === 0
+        : lot.packagingId || lot.product?.type === "FINISHED_GOODS"
+          ? qtyUnit > 0 && qtyKg === 0 && qtySupply === 0
+          : Boolean(lot.productId) && qtyKg > 0 && qtyUnit === 0 && qtySupply === 0;
+      if (!validDimension) {
+        throw new Error("INVALID_LOT_DIMENSION");
       }
 
       const sourcePlacement = await tx.lotPlacement.findFirst({
@@ -136,14 +153,40 @@ export async function transferLot(data: {
         throw new Error("INSUFFICIENT_SOURCE_SUPPLY");
       }
 
-      await tx.lotPlacement.update({
-        where: { id: sourcePlacement.id },
+      // Guarded decrement (pola consumeLotPlacements): kondisi gte pada where
+      // mencegah dua transfer konkuren sama-sama lolos cek lalu membuat
+      // quantityKg/placement negatif (check-then-act race di READ COMMITTED).
+      const decremented = await tx.lotPlacement.updateMany({
+        where: {
+          id: sourcePlacement.id,
+          ...(qtyKg > 0 ? { quantityKg: { gte: qtyKg } } : {}),
+          ...(qtyUnit > 0 ? { quantityUnit: { gte: qtyUnit } } : {}),
+          ...(qtySupply > 0 ? { supplyQty: { gte: qtySupply } } : {}),
+        },
         data: {
           quantityKg: { decrement: qtyKg },
           quantityUnit: { decrement: qtyUnit },
           supplyQty: { decrement: qtySupply },
         },
       });
+      if (decremented.count !== 1) {
+        // Kalah race dengan transfer lain — placement berubah sejak dibaca.
+        // Baca ulang untuk melempar error kekurangan yang tepat.
+        const fresh = await tx.lotPlacement.findUnique({
+          where: { id: sourcePlacement.id },
+          select: { quantityKg: true, quantityUnit: true, supplyQty: true },
+        });
+        if (qtyKg > Number(fresh?.quantityKg ?? 0)) {
+          throw new Error("INSUFFICIENT_SOURCE_KG");
+        }
+        if (qtyUnit > (fresh?.quantityUnit ?? 0)) {
+          throw new Error("INSUFFICIENT_SOURCE_UNIT");
+        }
+        if (qtySupply > Number(fresh?.supplyQty ?? 0)) {
+          throw new Error("INSUFFICIENT_SOURCE_SUPPLY");
+        }
+        throw new Error("SOURCE_PLACEMENT_CHANGED");
+      }
 
       await tx.lotPlacement.upsert({
         where: {
@@ -220,6 +263,8 @@ export async function transferLot(data: {
     if (msg === "INSUFFICIENT_SOURCE_KG") return { success: false, error: "Stok kg di lokasi sumber tidak mencukupi." };
     if (msg === "INSUFFICIENT_SOURCE_UNIT") return { success: false, error: "Stok unit di lokasi sumber tidak mencukupi." };
     if (msg === "INSUFFICIENT_SOURCE_SUPPLY") return { success: false, error: "Stok supply di lokasi sumber tidak mencukupi." };
+    if (msg === "INVALID_LOT_DIMENSION") return { success: false, error: "Satuan transfer tidak sesuai dengan jenis lot." };
+    if (msg === "SOURCE_PLACEMENT_CHANGED") return { success: false, error: "Stok lokasi berubah saat transfer diproses. Coba ulangi." };
     return { success: false, error: msg };
   }
 }

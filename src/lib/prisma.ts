@@ -296,7 +296,7 @@ async function assertOwnedRelationsBelongToTenant(
   }
 }
 
-export function withTenant(tenantId: string, base: PrismaClient = prisma) {
+function buildTenantClient(tenantId: string, base: PrismaClient) {
   const client = base.$extends({
     query: {
       $allModels: {
@@ -390,5 +390,28 @@ export function withTenant(tenantId: string, base: PrismaClient = prisma) {
     return origTx(fnOrOps, options);
   };
 
+  return client;
+}
+
+// Page-data helpers memanggil withTenant berkali-kali per request; klien
+// extended bersifat stateless per tenant sehingga aman di-memoize. Tanpa ini
+// satu render /inventory membuat ~6 instance extension.
+const withTenantCache = new WeakMap<PrismaClient, Map<string, ReturnType<typeof buildTenantClient>>>();
+const WITH_TENANT_CACHE_MAX = 32;
+
+export function withTenant(tenantId: string, base: PrismaClient = prisma) {
+  let byTenant = withTenantCache.get(base);
+  if (!byTenant) {
+    byTenant = new Map();
+    withTenantCache.set(base, byTenant);
+  }
+  const cached = byTenant.get(tenantId);
+  if (cached) return cached;
+
+  const client = buildTenantClient(tenantId, base);
+  if (byTenant.size >= WITH_TENANT_CACHE_MAX) {
+    byTenant.delete(byTenant.keys().next().value as string);
+  }
+  byTenant.set(tenantId, client);
   return client;
 }

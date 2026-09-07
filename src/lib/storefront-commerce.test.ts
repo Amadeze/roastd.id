@@ -37,8 +37,9 @@ describe("allocateProducedStockToDemand", () => {
       ]),
       stockReservation: {
         aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: null, quantityKg: null } }),
-        findUnique: vi.fn().mockResolvedValue(null),
-        upsert: vi.fn().mockResolvedValue({}),
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
       },
       fulfillmentTask: {
         findMany: vi.fn().mockResolvedValue([]),
@@ -81,7 +82,7 @@ describe("allocateProducedStockToDemand", () => {
     });
 
     expect(result).toEqual({ allocatedUnits: 1050, completedTasks: 105 });
-    expect(tx.stockReservation.upsert).toHaveBeenCalledTimes(105);
+    expect(tx.stockReservation.create).toHaveBeenCalledTimes(105);
     expect(tx.fulfillmentTask.update).toHaveBeenCalledTimes(105);
     expect(tx.fulfillmentTask.update).toHaveBeenCalledWith({
       where: { id: "task-104" },
@@ -110,8 +111,8 @@ describe("allocateProducedStockToDemand", () => {
       where: { id: "task-50" },
       data: { status: "CANCELLED" },
     });
-    expect(tx.stockReservation.upsert).not.toHaveBeenCalledWith(
-      expect.objectContaining({ where: { invoiceId_productId: { invoiceId: "invoice-50", productId: "finished-good-1" } } }),
+    expect(tx.stockReservation.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ invoiceId: "invoice-50", productId: "finished-good-1" }) }),
     );
   });
 });

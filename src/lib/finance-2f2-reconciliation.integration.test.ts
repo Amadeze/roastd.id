@@ -66,6 +66,25 @@ vi.mock("@/lib/auth", async (importOriginal) => {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
+// Fixture berbasis now() harus di-query pada periode berjalan; bulan yang
+// di-hardcode membuat tes vacuous begitu bulan berganti (tes ini belum
+// pernah berjalan di CI karena butuh DB nyata).
+function currentPeriod() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endExclusive = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const endInclusive = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+    start,
+    endExclusive,
+    startStr: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`,
+    endStr: `${endInclusive.getFullYear()}-${pad(endInclusive.getMonth() + 1)}-${pad(endInclusive.getDate())}`,
+  };
+}
+
 // Tanggal lokal (WIB) — toISOString() memakai UTC, jadi bandingkan komponen lokal.
 function localDateStr(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -227,7 +246,8 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
   it("1. delivered sale → P&L top lines exactly equal GL", async () => {
     await walkInSale([{ productId: fgProduct, quantity: 2 }]); // 2 x 700k, hpp 30k
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     expect(report.revenue).toBe(1_400_000);
     expect(report.cogs).toBe(60_000);
     expect(report.grossProfit).toBe(1_340_000);
@@ -239,7 +259,7 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     expect(await accountBalance("5-1000")).toBe(60_000);
     expect(await accountBalance("1-1000")).toBe(1_400_000);
 
-    const sales = await getSalesReport("2026-08-01", "2026-08-31");
+    const sales = await getSalesReport(period.startStr, period.endStr);
     expect(sales.totalRevenue).toBe(1_400_000);
     expect(sales.invoiceCount).toBe(1);
   });
@@ -254,7 +274,8 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     });
     expect(cn.success).toBe(true);
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     expect(report.revenue).toBe(700_000);
     expect(report.cogs).toBe(30_000);
     expect(report.netProfit).toBe(670_000);
@@ -278,19 +299,25 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     expect(await accountBalance("5-1000")).toBe(0);
     expect(await accountBalance("1-1000")).toBe(0);
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     expect(report.revenue).toBe(0);
     expect(report.cogs).toBe(0);
     expect(report.reconciliationDifference).toBe(0);
 
-    const sales = await getSalesReport("2026-08-01", "2026-08-31");
+    const sales = await getSalesReport(period.startStr, period.endStr);
     expect(sales.totalRevenue).toBe(0);
     expect(sales.invoiceCount).toBe(0);
   });
 
   // ------------------------------------------------------------ 4: expenses
   it("4. expense + void → GL net zero, report zero", async () => {
-    const created = await createExpense({ operationKey: randomUUID(), date: "2026-08-15", category: "OPERASIONAL", amount: 500_000, description: "Listrik" });
+    // Void harus terjadi pada periode yang sama dengan tanggal ekonomi
+    // beban — konvensi laporan: void lintas periode dibukukan pada periode
+    // void (lihat komentar deliveredInvoices/voidedInvoices di getPnLReport).
+    const period = currentPeriod();
+    const expenseDate = `${period.year}-${String(period.month).padStart(2, "0")}-15`;
+    const created = await createExpense({ operationKey: randomUUID(), date: expenseDate, category: "OPERASIONAL", amount: 500_000, description: "Listrik" });
     if (!created.success) throw new Error(created.error);
     const v = await voidExpense(created.id, "salah nominal");
     expect(v.success).toBe(true);
@@ -298,10 +325,10 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     expect(Math.abs(await accountBalance("5-2030"))).toBeLessThan(0.01);
     expect(Math.abs(await accountBalance("1-1000"))).toBeLessThan(0.01);
 
-    const report = await getPnLReport(8, 2026);
+    const report = await getPnLReport(period.month, period.year);
     expect(report.opex).toBe(0);
 
-    const expenseReport = await getExpenseReport("2026-08-01", "2026-08-31");
+    const expenseReport = await getExpenseReport(period.startStr, period.endStr);
     expect(expenseReport.totalExpenses).toBe(0);
     expect(expenseReport.outstandingPayable).toBe(0);
   });
@@ -437,7 +464,8 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     expect(await accountBalance("1-1100")).toBe(700_000);
     expect(Math.abs(await accountBalance("1-1000"))).toBeLessThan(0.01);
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     expect(report.revenue).toBe(700_000);
     expect(report.reconciliationDifference).toBe(0);
   });
@@ -471,11 +499,12 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     const cn = await createCreditNote({ invoiceId: id, reason: "retur satu unit", items: [{ productId: fgProduct, quantity: 1, unitDiscount: 0 }], operationKey: randomUUID() });
     expect(cn.success).toBe(true);
 
+    const period = currentPeriod();
     const movement = await computeCashMovement({
       tp: prisma,
       tenantId: TENANT,
-      start: new Date("2026-08-01T00:00:00"),
-      end: new Date("2026-09-01T00:00:00"),
+      start: period.start,
+      end: period.endExclusive,
     });
     expect(movement.net).toBe(1_400_000);
 
@@ -562,7 +591,8 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     // Cache produk berubah SETELAH periode — tidak boleh memengaruhi P&L.
     await prisma.product.update({ where: { id: fgProduct }, data: { lastHpp: 999_999, avgCostPerKg: 999_999 } });
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     const row = report.cogsBreakdown.find((r) => r.category === "KERUGIAN_MATERIAL");
     expect(row).toBeDefined();
     expect(row!.amount).toBe(100_000); // 2 x 50.000 dari incomingPrice
@@ -621,7 +651,8 @@ suite("Phase 2F.2 — Financial Statements & Reconciliation", () => {
     // karena getCurrentDate() dipanggil dua kali pada jalur yang sama.
     expect(Math.abs(journal!.date.getTime() - inv!.deliveredAt!.getTime())).toBeLessThan(5_000);
 
-    const report = await getPnLReport(8, 2026);
+    const period = currentPeriod();
+    const report = await getPnLReport(period.month, period.year);
     expect(report.revenue).toBe(700_000);
     expect(report.reconciliationDifference).toBe(0);
   });

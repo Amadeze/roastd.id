@@ -39,7 +39,9 @@ async function lockProductForUpdate(tx: StorefrontTx, tenantId: string, productI
 
 async function aggregateActiveReservations(tx: StorefrontTx, tenantId: string, productId: string) {
   const agg = await tx.stockReservation.aggregate({
-    where: { tenantId, productId, status: "ACTIVE" },
+    // Reservasi ACTIVE yang sudah lewat expiresAt tapi belum di-sweep cron
+    // tidak boleh mengunci stok — hitung tersedia sejak kedaluwarsa.
+    where: { tenantId, productId, status: "ACTIVE", expiresAt: { gt: new Date() } },
     _sum: { quantity: true, quantityKg: true },
   });
   return {
@@ -490,37 +492,41 @@ export async function allocateProducedStockToDemand(
       const requiredKg = requiredKgFromSnapshot > 0
         ? requiredKgFromSnapshot
         : Number(task.requestedQuantity);
-      const currentReservation = await tx.stockReservation.findUnique({
-        where: {
-          invoiceId_productId: {
-            invoiceId: task.invoiceId,
-            productId: input.productId,
-          },
-        },
-        select: { quantityKg: true },
+      // Unique key (invoiceId, productId) diganti (invoiceId, productId,
+      // grindSize) sejak migrasi 012. Jalur alokasi selalu tanpa grind
+      // (grindSize null), dan NULL tidak unik di Postgres, jadi lookup +
+      // branch manual menggantikan upsert compound key lama.
+      const currentReservation = await tx.stockReservation.findFirst({
+        where: { invoiceId: task.invoiceId, productId: input.productId, grindSize: null },
+        select: { id: true, quantityKg: true },
       });
       const alreadyReservedKg = Number(currentReservation?.quantityKg ?? 0);
       const missingKg = roundKg(Math.max(0, requiredKg - alreadyReservedKg));
       const allocatedKg = roundKg(Math.min(available, missingKg));
       if (allocatedKg <= 0) continue;
 
-      await tx.stockReservation.upsert({
-        where: { invoiceId_productId: { invoiceId: task.invoiceId, productId: input.productId } },
-        create: {
-          tenantId: input.tenantId,
-          invoiceId: task.invoiceId,
-          productId: input.productId,
-          quantity: task.requestedQuantity,
-          quantityKg: allocatedKg,
-          expiresAt: task.invoice.reservationExpiresAt ?? new Date(now.getTime() + 24 * 60 * 60 * 1_000),
-        },
-        update: {
-          quantity: task.requestedQuantity,
-          quantityKg: { increment: allocatedKg },
-          status: "ACTIVE",
-          releasedAt: null,
-        },
-      });
+      if (currentReservation) {
+        await tx.stockReservation.update({
+          where: { id: currentReservation.id },
+          data: {
+            quantity: task.requestedQuantity,
+            quantityKg: { increment: allocatedKg },
+            status: "ACTIVE",
+            releasedAt: null,
+          },
+        });
+      } else {
+        await tx.stockReservation.create({
+          data: {
+            tenantId: input.tenantId,
+            invoiceId: task.invoiceId,
+            productId: input.productId,
+            quantity: task.requestedQuantity,
+            quantityKg: allocatedKg,
+            expiresAt: task.invoice.reservationExpiresAt ?? new Date(now.getTime() + 24 * 60 * 60 * 1_000),
+          },
+        });
+      }
       const completed = roundKg(missingKg - allocatedKg) <= 0;
       await tx.fulfillmentTask.update({
         where: { id: task.id },
@@ -550,21 +556,32 @@ export async function allocateProducedStockToDemand(
 
     const allocated = Math.min(available, task.shortageQuantity);
     const allocatedUnitsDelta = allocated;
-    await tx.stockReservation.upsert({
-        where: { invoiceId_productId: { invoiceId: task.invoiceId, productId: input.productId } },
-        create: {
-          tenantId: input.tenantId, invoiceId: task.invoiceId, productId: input.productId,
-          quantity: allocatedUnitsDelta,
-          quantityKg: null,
-          expiresAt: task.invoice.reservationExpiresAt ?? new Date(now.getTime() + 24 * 60 * 60 * 1_000),
-        },
-        update: {
+    // Compound key lama (invoiceId, productId) sudah tidak ada sejak migrasi
+    // 012 — pakai findFirst + branch manual (grindSize null tidak unik di PG).
+    const currentUnitReservation = await tx.stockReservation.findFirst({
+      where: { invoiceId: task.invoiceId, productId: input.productId, grindSize: null },
+      select: { id: true },
+    });
+    if (currentUnitReservation) {
+      await tx.stockReservation.update({
+        where: { id: currentUnitReservation.id },
+        data: {
           quantity: { increment: allocatedUnitsDelta },
           quantityKg: undefined,
           status: "ACTIVE",
           releasedAt: null,
         },
-    });
+      });
+    } else {
+      await tx.stockReservation.create({
+        data: {
+          tenantId: input.tenantId, invoiceId: task.invoiceId, productId: input.productId,
+          quantity: allocatedUnitsDelta,
+          quantityKg: null,
+          expiresAt: task.invoice.reservationExpiresAt ?? new Date(now.getTime() + 24 * 60 * 60 * 1_000),
+        },
+      });
+    }
     const shortageQuantity = task.shortageQuantity - allocatedUnitsDelta;
     const completed = shortageQuantity === 0;
     await tx.fulfillmentTask.update({

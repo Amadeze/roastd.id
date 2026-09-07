@@ -16,6 +16,7 @@ function transaction(updateCount = 1) {
     inventoryLedger: {
       create: vi.fn(async ({ data }) => ({ id: "ledger-1", ...data })),
       findMany: vi.fn().mockResolvedValue([]),
+      groupBy: vi.fn().mockResolvedValue([]),
     },
     lot: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -437,6 +438,55 @@ expect(tx.lotPlacement.updateMany).toHaveBeenNthCalledWith(2, {
       where: { id: "placement-b", tenantId: "tenant-1", quantityKg: { gte: 3 } },
       data: { quantityKg: { decrement: 3 } },
     });
+  });
+
+  it("uses grouped ledger totals rather than the original lot quantity", async () => {
+    const tx = transaction();
+    tx.$queryRaw.mockResolvedValue([{ id: "lot-1" }]);
+    tx.lot.findMany.mockResolvedValue([{
+      id: "lot-1", batchCode: "LOT-1", expiryDate: null,
+      quantityKg: 10, quantityUnit: 0, supplyQuantity: 0,
+    }]);
+    tx.inventoryLedger.groupBy.mockResolvedValue([
+      { lotId: "lot-1", entryType: "IN", _sum: { quantityKg: 10, quantityUnit: null, supplyQuantity: null }, _count: { _all: 1 } },
+      { lotId: "lot-1", entryType: "OUT", _sum: { quantityKg: 7, quantityUnit: null, supplyQuantity: null }, _count: { _all: 1 } },
+    ]);
+
+    await appendFefoLedgerOut(tx, {
+      tenantId: "tenant-1", productId: "green-bean-1", quantityKg: 5,
+      refType: "ROASTING_GB_OUT", refId: "roast-1", createdById: "user-1",
+    });
+
+    expect(tx.inventoryLedger.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({ lotId: "lot-1", quantityKg: 3 }),
+    });
+    expect(tx.inventoryLedger.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({ lotId: null, quantityKg: 2 }),
+    });
+  });
+
+  it("excludes reversal rows when aggregating a lot's FEFO balance", async () => {
+    const tx = transaction();
+    tx.$queryRaw.mockResolvedValue([{ id: "lot-1" }]);
+    tx.lot.findMany.mockResolvedValue([{
+      id: "lot-1", batchCode: "LOT-1", expiryDate: null,
+      quantityKg: 10, quantityUnit: 0, supplyQuantity: 0,
+    }]);
+    tx.inventoryLedger.groupBy.mockResolvedValue([]);
+
+    await appendFefoLedgerOut(tx, {
+      tenantId: "tenant-1", productId: "green-bean-1", quantityKg: 1,
+      refType: "ROASTING_GB_OUT", refId: "roast-1", createdById: "user-1",
+    });
+
+    expect(tx.inventoryLedger.groupBy).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        NOT: [
+          { refType: "VOID_REVERSAL" },
+          { reversalOfLedgerId: { not: null } },
+        ],
+      }),
+    }));
   });
 
   it("never targets placements at system locations (e.g. Roasting WIP)", async () => {

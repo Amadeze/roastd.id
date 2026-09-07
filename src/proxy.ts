@@ -110,19 +110,15 @@ export function proxy(request: NextRequest) {
       request: { headers: requestHeaders },
     });
     response.headers.set("x-roastd-tenant", tenantSubdomain);
-    response.headers.set(FLAG_REQUEST_HEADER, flagRequestHeaderValue());
   } else if (isPublicRoute(pathname)) {
     response = NextResponse.next({ request: { headers: requestHeaders } });
-    response.headers.set(FLAG_REQUEST_HEADER, flagRequestHeaderValue());
   } else if (!request.cookies.get("ros_session")) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
     response = NextResponse.redirect(loginUrl);
-    response.headers.set(FLAG_REQUEST_HEADER, flagRequestHeaderValue());
   } else {
     requestHeaders.set("x-pathname", pathname);
     response = NextResponse.next({ request: { headers: requestHeaders } });
-    response.headers.set(FLAG_REQUEST_HEADER, flagRequestHeaderValue());
   }
 
   response.headers.set("x-nonce", nonce);
@@ -135,10 +131,6 @@ export const config = {
     {
       source:
         "/((?!_next/static|_next/image|favicon.ico|images/|fonts/|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
     },
   ],
 };

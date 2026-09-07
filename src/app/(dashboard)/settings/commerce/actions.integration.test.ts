@@ -187,6 +187,7 @@ suite("tenant shipping settings (real PostgreSQL)", () => {
       pickupEnabled: "on",
       deliveryEnabled: "",
       nationalCourierEnabled: "on",
+      rajaOngkirCourierCodes: ["jne"],
       rajaOngkirTareGrams: "0",
       flatShippingRate: "0",
       freeShippingMinimum: "",

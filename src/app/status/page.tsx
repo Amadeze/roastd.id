@@ -68,12 +68,18 @@ const SUBSYSTEMS = [
   },
 ] as const;
 
+function probeOrigin(): string {
+  const fromEnv = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? BASE_URL;
+  return fromEnv.replace(/\/+$/, "");
+}
+
 async function fetchHealth(origin: string): Promise<StatusView> {
   const endpoint = `${origin}/api/health`;
   try {
     const response = await fetch(endpoint, {
       cache: "no-store",
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5_000),
     });
     const data = (await response.json()) as PublicHealth;
     return {
@@ -119,11 +125,7 @@ export default async function StatusPage() {
     );
   }
 
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? "roastd.id";
-  const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const origin = `${proto}://${host}`;
-  const view = await fetchHealth(origin);
+  const view = await fetchHealth(probeOrigin());
   const checkedAt = new Date(view.checkedAt);
 
   return (

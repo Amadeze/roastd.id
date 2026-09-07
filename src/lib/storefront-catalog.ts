@@ -417,6 +417,8 @@ export async function loadStorefrontCatalog(
           productId: { in: lineageIds },
           status: "ACTIVE",
           quantityKg: { not: null },
+          // Reservasi kedaluwarsa yang belum di-sweep tidak mengunci stok.
+          expiresAt: { gt: new Date() },
         },
         _sum: { quantityKg: true },
       }),

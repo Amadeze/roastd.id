@@ -172,7 +172,7 @@ suite("coffee offerings — real PostgreSQL (TEST_DATABASE_URL)", () => {
     tenantId: string,
     code: string,
     items: Array<Record<string, unknown>>,
-    options: { status?: string; fulfillmentStatus?: string } = {},
+    options: { status?: string; fulfillmentStatus?: string; paidAmount?: number } = {},
   ) {
     const customer = await client.customer.create({
       data: { tenantId, code: `CST-${code}`, name: "Budi Storefront", isActive: true },
@@ -187,7 +187,7 @@ suite("coffee offerings — real PostgreSQL (TEST_DATABASE_URL)", () => {
         tax: 13_000,
         shippingCost: 0,
         grandTotal: 143_000,
-        paidAmount: 143_000,
+        paidAmount: options.paidAmount ?? 143_000,
         status: (options.status ?? "ISSUED") as any,
         fulfillmentStatus: (options.fulfillmentStatus ?? "AWAITING_PAYMENT") as any,
         createdById: `user-${tenantId}`,
@@ -438,14 +438,14 @@ suite("coffee offerings — real PostgreSQL (TEST_DATABASE_URL)", () => {
 
   it("releases a kg reservation so the same stock can be reserved again", async () => {
     await client.product.update({ where: { id: rbProductA }, data: { stockKg: 1 } });
-    const first = await makeInvoice(TENANT_A, `OFFA-REL-A-${randomUUID().slice(0, 5)}`, [{ tenantId: TENANT_A, productId: rbProductA, quantity: 1, unitPrice: 1, subtotal: 1, hpp: 0, netWeightGrams: 1000 }]);
+    const first = await makeInvoice(TENANT_A, `OFFA-REL-A-${randomUUID().slice(0, 5)}`, [{ tenantId: TENANT_A, productId: rbProductA, quantity: 1, unitPrice: 1, subtotal: 1, hpp: 0, netWeightGrams: 1000 }], { paidAmount: 0 });
     await client.$transaction((tx) => reserveInvoiceStock(tx, {
       tenantId: TENANT_A, invoiceId: first.id, expiresAt: new Date(Date.now() + 60_000),
       items: [{ productId: rbProductA, quantity: 1, quantityKg: 1 }],
     }));
     await client.$transaction((tx) => releaseInvoiceReservations(tx, first.id));
 
-    const second = await makeInvoice(TENANT_A, `OFFA-REL-B-${randomUUID().slice(0, 5)}`, [{ tenantId: TENANT_A, productId: rbProductA, quantity: 1, unitPrice: 1, subtotal: 1, hpp: 0, netWeightGrams: 1000 }]);
+    const second = await makeInvoice(TENANT_A, `OFFA-REL-B-${randomUUID().slice(0, 5)}`, [{ tenantId: TENANT_A, productId: rbProductA, quantity: 1, unitPrice: 1, subtotal: 1, hpp: 0, netWeightGrams: 1000 }], { paidAmount: 0 });
     const result = await client.$transaction((tx) => reserveInvoiceStock(tx, {
       tenantId: TENANT_A, invoiceId: second.id, expiresAt: new Date(Date.now() + 60_000),
       items: [{ productId: rbProductA, quantity: 1, quantityKg: 1 }],

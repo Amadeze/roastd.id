@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withSerializableRetry } from "@/lib/transaction-retry";
@@ -192,7 +192,7 @@ export async function POST(
     // 1. Dapatkan tenant
     const tenant = await prisma.tenant.findUnique({
       where: { subdomain },
-      include: { users: { take: 1, orderBy: { createdAt: 'asc' } } }
+      include: { users: { take: 1, orderBy: { createdAt: 'asc' }, select: { id: true } } }
     });
 
     if (
@@ -308,45 +308,48 @@ const activePaymentMethods = await prisma.tenantPaymentMethod.findMany({
     const offeringLines = normalizedItems.filter((item) => item.offeringId);
 
     const productIds = Array.from(new Set(productLines.map((item) => item.productId!)));
-    const products = await prisma.product.findMany({
-      where: {
-        tenantId: tenant.id,
-        id: { in: productIds },
-        type: "FINISHED_GOODS",
-        isActive: true,
-        ...(!b2bContext ? { price: { gt: 0 } } : {}),
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        priceSilver: true,
-        priceGold: true,
-        netWeightGrams: true,
-        recipes: {
-          where: { isActive: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: { storefrontGrindOptions: true },
+    // products dan lastBatches sama-sama hanya bergantung pada productIds —
+    // jalankan paralel daripada dua round-trip berurutan.
+    const [products, lastBatches] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          tenantId: tenant.id,
+          id: { in: productIds },
+          type: "FINISHED_GOODS",
+          isActive: true,
+          ...(!b2bContext ? { price: { gt: 0 } } : {}),
         },
-      },
-    });
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          priceSilver: true,
+          priceGold: true,
+          netWeightGrams: true,
+          recipes: {
+            where: { isActive: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { storefrontGrindOptions: true },
+          },
+        },
+      }),
+      // Batch HPP lookup to avoid N+1 queries
+      prisma.productionBatch.findMany({
+        where: {
+          tenantId: tenant.id,
+          status: "COMPLETED",
+          outputProductId: { in: productIds },
+        },
+        orderBy: { producedAt: "desc" },
+        select: { outputProductId: true, hppPerUnit: true },
+        distinct: ["outputProductId"],
+      }),
+    ]);
 
     if (products.length !== productIds.length) {
       return NextResponse.json({ error: "Ada produk yang tidak valid atau tidak aktif" }, { status: 400 });
     }
-
-    // Batch HPP lookup to avoid N+1 queries
-    const lastBatches = await prisma.productionBatch.findMany({
-      where: {
-        tenantId: tenant.id,
-        status: "COMPLETED",
-        outputProductId: { in: products.map(p => p.id) },
-      },
-      orderBy: { producedAt: "desc" },
-      select: { outputProductId: true, hppPerUnit: true },
-      distinct: ["outputProductId"],
-    });
     const hppByProduct = new Map(
       lastBatches.map(b => [b.outputProductId, Number(b.hppPerUnit || 0)])
     );
@@ -363,26 +366,44 @@ const activePaymentMethods = await prisma.tenantPaymentMethod.findMany({
       }
       offeringById = new Map(offeringRows.map((offering) => [offering.id, offering]));
 
-      for (const offering of offeringRows) {
-        try {
-          const resolution = await resolveOfferingLineage(prisma, {
-            ...offering,
-            tenantId: tenant.id,
-          });
-          lineageById.set(offering.id, {
-            productId: resolution.productId,
-            avgCostPerKg: resolution.avgCostPerKg,
-          });
-        } catch (error) {
+      // Batasi paralelisme agar keranjang besar tidak menghabiskan koneksi DB.
+      const lineageResults: Array<
+        | { offeringId: string; productId: string; avgCostPerKg: number | null }
+        | { error: unknown }
+      > = [];
+      for (let index = 0; index < offeringRows.length; index += 8) {
+        const batch = await Promise.all(offeringRows.slice(index, index + 8).map(async (offering) => {
+          try {
+            const resolution = await resolveOfferingLineage(prisma, {
+              ...offering,
+              tenantId: tenant.id,
+            });
+            return {
+              offeringId: offering.id,
+              productId: resolution.productId,
+              avgCostPerKg: resolution.avgCostPerKg,
+            };
+          } catch (error) {
+            return { error };
+          }
+        }));
+        lineageResults.push(...batch);
+      }
+      for (const result of lineageResults) {
+        if ("error" in result) {
           return NextResponse.json(
             {
-              error: error instanceof LineageResolutionError
-                ? error.message
+              error: result.error instanceof LineageResolutionError
+                ? result.error.message
                 : "Belum ada stok roasted bean untuk penawaran ini. Silakan hubungi roastery.",
             },
             { status: 400 },
           );
         }
+        lineageById.set(result.offeringId, {
+          productId: result.productId,
+          avgCostPerKg: result.avgCostPerKg,
+        });
       }
     }
 
@@ -1054,34 +1075,38 @@ let tax: number, shippingCost: number, grandTotal: number;
     const resolvedPublicOrderToken = invoice.publicOrderToken ?? orderPublicToken;
     const publicOrderUrl = `${appUrl}/tenant/${subdomain}/order/${resolvedPublicOrderToken}`;
     if (!replayed) {
-      const notifications = [];
-      if (customerEmail) {
-        notifications.push(sendInvoiceEmail(customerEmail, invoice.code, publicOrderUrl));
-      }
-      notifications.push(sendInvoiceWhatsApp(customerPhone, invoice.code, publicOrderUrl));
+      // Notifikasi eksternal (email/WA, timeout bisa 15 detik) tidak boleh
+      // menahan respons pembeli — invoice sudah ter-commit; kirim setelahnya.
+      after(async () => {
+        const notifications = [];
+        if (customerEmail) {
+          notifications.push(sendInvoiceEmail(customerEmail, invoice.code, publicOrderUrl));
+        }
+        notifications.push(sendInvoiceWhatsApp(customerPhone, invoice.code, publicOrderUrl));
 
-      if (tenant.contactEmail) {
-        notifications.push(sendNewOrderNotificationEmail({
-          to: tenant.contactEmail,
-          tenantName: tenant.name,
-          invoiceCode: invoice.code,
-          customerName,
-          grandTotal,
-          orderUrl: `${appUrl}/penjualan`,
-        }));
-      }
-      if (tenant.whatsappNumber) {
-        notifications.push(sendNewOrderNotificationWhatsApp({
-          phone: tenant.whatsappNumber,
-          tenantName: tenant.name,
-          invoiceCode: invoice.code,
-          customerName,
-          grandTotal,
-          orderUrl: `${appUrl}/penjualan`,
-        }));
-      }
+        if (tenant.contactEmail) {
+          notifications.push(sendNewOrderNotificationEmail({
+            to: tenant.contactEmail,
+            tenantName: tenant.name,
+            invoiceCode: invoice.code,
+            customerName,
+            grandTotal,
+            orderUrl: `${appUrl}/penjualan`,
+          }));
+        }
+        if (tenant.whatsappNumber) {
+          notifications.push(sendNewOrderNotificationWhatsApp({
+            phone: tenant.whatsappNumber,
+            tenantName: tenant.name,
+            invoiceCode: invoice.code,
+            customerName,
+            grandTotal,
+            orderUrl: `${appUrl}/penjualan`,
+          }));
+        }
 
-      await Promise.allSettled(notifications);
+        await Promise.allSettled(notifications);
+      });
     }
 
 return NextResponse.json({

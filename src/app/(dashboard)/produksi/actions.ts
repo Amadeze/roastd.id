@@ -739,14 +739,22 @@ export async function createProductionBatch(
         hppPerKg: number;
       }> = [];
 
+      // Batch lookup semua komponen RB sekaligus (findMany + Map) — mengganti
+      // findUnique per komponen di dalam tx (lock-hold time per round-trip).
+      const rbProductIds = Array.from(new Set(
+        normalizedComponents.map(({ productId }) => productId),
+      ));
+      const rbProducts = await tx.product.findMany({
+        where: { id: { in: rbProductIds } },
+        select: { id: true, name: true, type: true, isActive: true, stockKg: true, avgCostPerKg: true },
+      });
+      const rbProductById = new Map(rbProducts.map((rbProduct) => [rbProduct.id, rbProduct]));
+
       for (const { productId, actualGrams } of normalizedComponents) {
         const actualKg = actualGrams / 1000;
         if (actualKg <= 0) continue;
 
-        const rbProduct = await tx.product.findUnique({
-          where: { id: productId },
-          select: { name: true, type: true, isActive: true, stockKg: true, avgCostPerKg: true },
-        });
+        const rbProduct = rbProductById.get(productId);
         if (
           !rbProduct ||
           !rbProduct.isActive ||
@@ -821,6 +829,32 @@ export async function createProductionBatch(
       const supplyComponents = input.supplyComponents ?? [];
       const supplyComponentIds = new Set<string>();
 
+      // Batch lookup semua supply item sekaligus — mengganti findUnique per
+      // komponen di dalam tx. Urutan validasi per komponen tetap sama.
+      const requestedSupplyItemIds = Array.from(new Set(
+        supplyComponents
+          .map((sc) => sc.supplyItemId)
+          .filter((supplyItemId): supplyItemId is string => Boolean(supplyItemId)),
+      ));
+      const supplyItems = requestedSupplyItemIds.length > 0
+        ? await tx.inventorySupplyItem.findMany({
+            where: { id: { in: requestedSupplyItemIds } },
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              isActive: true,
+              consumableInProduction: true,
+              includeInProductHpp: true,
+              trackLot: true,
+              avgCostPerUnit: true,
+              stockQuantity: true,
+              tenantId: true,
+            },
+          })
+        : [];
+      const supplyItemById = new Map(supplyItems.map((supplyItem) => [supplyItem.id, supplyItem]));
+
       for (const sc of supplyComponents) {
         if (!sc.supplyItemId) continue;
         if (supplyComponentIds.has(sc.supplyItemId)) {
@@ -833,22 +867,7 @@ export async function createProductionBatch(
           return { success: false, error: "Quantity supply harus lebih besar dari 0." };
         }
 
-        const supplyItem = await tx.inventorySupplyItem.findUnique({
-          where: { id: sc.supplyItemId },
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            isActive: true,
-            consumableInProduction: true,
-            includeInProductHpp: true,
-            trackLot: true,
-            avgCostPerUnit: true,
-            stockQuantity: true,
-            tenantId: true,
-          },
-        });
-
+        const supplyItem = supplyItemById.get(sc.supplyItemId);
         if (!supplyItem || supplyItem.tenantId !== tenantId) {
           return { success: false, error: "Supply item tidak ditemukan atau tidak termasuk dalam tenant ini." };
         }

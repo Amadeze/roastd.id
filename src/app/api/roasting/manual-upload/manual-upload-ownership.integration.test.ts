@@ -258,7 +258,7 @@ suite("manual roasting upload machine ownership (integration)", () => {
     await prisma.user.update({ where: { id: USER_A_DISABLED }, data: { isActive: false } });
 
     const second = await upload(MACHINE_A_ACTIVE, "sample-roast.alog");
-    expect(second.status).toBe(500);
+    expect(second.status).toBe(401);
     expect(await importCount(TENANT_A)).toBe(before);
   });
 

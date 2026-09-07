@@ -30,10 +30,16 @@ export async function resetPassword(token: string, password: string) {
       windowSeconds: 60 * 60,
     });
 
-    if (!token || password.length < 8) {
+    if (
+      !token ||
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[0-9]/.test(password)
+    ) {
       return {
         success: false,
-        message: "Token tidak valid atau password kurang dari 8 karakter.",
+        message:
+          "Token tidak valid atau password tidak memenuhi syarat: minimal 8 karakter, satu huruf kapital, dan satu angka.",
       };
     }
 

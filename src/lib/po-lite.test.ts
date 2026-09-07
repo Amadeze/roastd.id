@@ -70,6 +70,7 @@ function createMockPrisma() {
     supplier: {
       findUnique: vi.fn(),
     },
+    $queryRaw: vi.fn().mockResolvedValue([]),
     $transaction: vi.fn(),
   };
 

@@ -61,11 +61,15 @@ export async function withSerializableRetry<T>(
   client: TransactionLike,
   callback: (tx: Prisma.TransactionClient) => Promise<T>,
   maxAttempts = 3,
+  transactionOptions: { maxWait?: number; timeout?: number } = {},
 ): Promise<T> {
   let attempt = 0;
   while (true) {
     try {
-      return await client.$transaction(callback, { isolationLevel: "Serializable" });
+      return await client.$transaction(callback, {
+        isolationLevel: "Serializable",
+        ...transactionOptions,
+      });
     } catch (err) {
       if (isRetryableTransactionConflict(err) && attempt < maxAttempts - 1) {
         attempt += 1;

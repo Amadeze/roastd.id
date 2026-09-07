@@ -16,6 +16,7 @@ import { postPurchase, postStockAdjustment } from "@/lib/posting";
 import { summarizeLotInventory, summarizeSupplyLotInventory, type LotOperationalStatus } from "@/lib/lot";
 import { createSupplyPurchase, type CreateSupplyPurchaseInput } from "@/lib/supply-purchase";
 import { createLotPlacementInTx } from "@/lib/storage-location";
+import { withSerializableRetry } from "@/lib/transaction-retry";
 import { normalizeCoffeeIdentity } from "@/lib/coffee-identity";
 import type {
   ProductStockRow,
@@ -1444,15 +1445,19 @@ export async function adjustStock(input: {
 
     const refId = input.operationKey || "OPNAME-" + randomBytes(6).toString("hex").toUpperCase();
 
-    if (input.operationKey) {
-      const existing = await (await requireTenantPrisma()).inventoryLedger.findFirst({
-        where: { refId: input.operationKey, refType: { in: ["ADJUSTMENT_IN", "ADJUSTMENT_OUT"] } },
-        select: { id: true },
-      });
-      if (existing) return { success: true };
-    }
+    // Retry P2034 agar double-click konkuren dengan operationKey sama tetap
+    // idempoten (yang kalah menemukan ledger pemenang saat retry), bukan error.
+    await withSerializableRetry(await requireTenantPrisma(), async (tx) => {
+      // Cek idempotensi harus di dalam tx Serializable agar dua retry
+      // konkuren dengan operationKey sama tidak lolos bersamaan.
+      if (input.operationKey) {
+        const existing = await tx.inventoryLedger.findFirst({
+          where: { refId: input.operationKey, refType: { in: ["ADJUSTMENT_IN", "ADJUSTMENT_OUT"] } },
+          select: { id: true },
+        });
+        if (existing) return;
+      }
 
-    await (await requireTenantPrisma()).$transaction(async (tx) => {
       let qtyKg: number | null = null;
       let qtyUnit: number | null = null;
       let unitCost = 0;
@@ -1520,7 +1525,7 @@ export async function adjustStock(input: {
         unitCost,
         { tx, tenantId, userId },
       );
-    }, { isolationLevel: "Serializable", maxWait: 15000, timeout: 60000 });
+    }, 3, { maxWait: 15000, timeout: 60000 });
 
     revalidatePath("/inventory");
 
