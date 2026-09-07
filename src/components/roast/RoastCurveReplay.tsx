@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { Pause, Play, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   computeRoRSeries,
   type RoastCurvePoint,
@@ -128,14 +129,21 @@ export function RoastCurveReplay({
 
   const [head, setHead] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
   const rafRef = useRef<number | null>(null);
   const lastTickRef = useRef<number | null>(null);
+
+  const speedOptions = [
+    { label: "0.5×", value: 0.5 },
+    { label: "1×", value: 1 },
+    { label: "2×", value: 2 },
+  ] as const;
 
   useEffect(() => {
     if (!replay || !playing || totalSeconds <= 0) return;
     const step = (now: number) => {
       if (lastTickRef.current == null) lastTickRef.current = now;
-      const dt = (now - lastTickRef.current) / 1000;
+      const dt = ((now - lastTickRef.current) / 1000) * speed;
       lastTickRef.current = now;
       setHead((prev) => {
         const next = prev + dt;
@@ -153,7 +161,7 @@ export function RoastCurveReplay({
       rafRef.current = null;
       lastTickRef.current = null;
     };
-  }, [replay, playing, totalSeconds]);
+  }, [replay, playing, totalSeconds, speed]);
 
   const headLineX = replay && playing ? head : null;
 
@@ -309,11 +317,11 @@ export function RoastCurveReplay({
         </LineChart>
       </ResponsiveContainer>
       {replay && totalSeconds > 0 && (
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => setPlaying((prev) => !prev)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-ink transition hover:border-copper/60 hover:text-copper"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-ink transition hover:border-copper/60 hover:text-copper active:scale-95"
             aria-label={playing ? "Jeda replay" : "Mulai replay"}
           >
             {playing ? <Pause className="size-4" aria-hidden="true" /> : <Play className="size-4" aria-hidden="true" />}
@@ -324,11 +332,29 @@ export function RoastCurveReplay({
               setHead(0);
               setPlaying(false);
             }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-ink-secondary transition hover:border-copper/60 hover:text-copper"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-ink-secondary transition hover:border-copper/60 hover:text-copper active:scale-95"
             aria-label="Reset replay ke awal"
           >
             <RotateCcw className="size-4" aria-hidden="true" />
           </button>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5" role="group" aria-label="Playback speed">
+            {speedOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setSpeed(opt.value)}
+                aria-pressed={speed === opt.value}
+                className={cn(
+                  "h-7 rounded-md px-2 text-[11px] font-bold transition-colors",
+                  speed === opt.value
+                    ? "bg-copper text-white"
+                    : "text-ink-secondary hover:bg-surface-sunken hover:text-ink",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <input
             type="range"
             min={0}
