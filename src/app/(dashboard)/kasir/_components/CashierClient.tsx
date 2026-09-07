@@ -531,21 +531,21 @@ export function CashierClient({
                   const price = priceResolution.unitPrice;
                   const unavailable = product.stockUnit <= 0;
                   return (
-                    <article key={product.id} className="relative flex min-h-[120px] flex-col rounded-xl border border-border bg-card p-3">
+                    <article key={product.id} className="relative flex min-h-[140px] flex-col rounded-xl border border-border bg-card p-3">
                       {quantity > 0 ? (
                         <div className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--status-danger)] text-xs font-bold text-white shadow-sm ring-2 ring-white">
                           {quantity}
                         </div>
                       ) : null}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-ink-secondary">{product.code}</p>
-                        <h2 className="mt-0.5 line-clamp-2 text-xs font-bold leading-4 text-ink">{product.name}</h2>
-                        <p className={cn("mt-1 text-[10px] font-medium", unavailable ? "text-[var(--status-danger)]" : "text-ink-secondary")}>
+                        <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">{product.code}</p>
+                        <h2 className="mt-0.5 line-clamp-2 text-sm font-bold leading-4 text-ink">{product.name}</h2>
+                        <p className={cn("mt-1 text-[11px] font-medium", unavailable ? "text-[var(--status-danger)]" : "text-ink-secondary")}>
                           {unavailable ? "Habis" : `${product.stockUnit} pcs`}
                         </p>
                       </div>
                       <div className="mt-auto flex items-end justify-between gap-1.5 pt-2">
-                        <span className="text-[11px] font-bold tabular-nums text-ink">
+                        <span className="text-sm font-bold tabular-nums text-ink">
                           {formatRupiah(price)}
                         </span>
                         {quantity > 0 ? (
@@ -559,7 +559,7 @@ export function CashierClient({
                             </button>
                           </div>
                         ) : (
-                          <button type="button" onClick={() => changeQuantity(product, 1)} disabled={unavailable} className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white hover:bg-ink/90 active:bg-ink/80 disabled:bg-surface-sunken disabled:text-ink-secondary" aria-label={`Tambah ${product.name}`}>
+                          <button type="button" onClick={() => changeQuantity(product, 1)} disabled={unavailable} className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white transition-transform hover:bg-ink/90 active:scale-90 disabled:bg-surface-sunken disabled:text-ink-secondary" aria-label={`Tambah ${product.name}`}>
                             <Plus size={14} />
                           </button>
                         )}

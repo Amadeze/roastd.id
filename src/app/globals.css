@@ -485,6 +485,14 @@
   --text-tertiary: #8B8478;
 
   --dashboard-canvas-grid: rgba(242, 239, 234, 0.03);
+
+  /* Domain colors — dark mode adjusted (lighter for dark backgrounds) */
+  --domain-inventory: #4B917E;
+  --domain-roasting: #D96A45;
+  --domain-production: #D9A43B;
+  --domain-sales: #9B6A8A;
+  --domain-finance: #6B8B5C;
+  --domain-warehouse: #4B7567;
 }
 
 @layer base {

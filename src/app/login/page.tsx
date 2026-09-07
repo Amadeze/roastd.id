@@ -70,39 +70,42 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Eyebrow tone="neutral" as="label" className="block">Email</Eyebrow>
+        <label htmlFor="email-input" className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-secondary">Email</label>
         <input
+          id="email-input"
           type="email"
           autoComplete="email"
+          aria-required="true"
           placeholder="admin@roasteryos.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-12 w-full rounded-[10px] border border-input bg-card px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          required
         />
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Eyebrow tone="neutral" as="label" className="block">Password</Eyebrow>
+          <label htmlFor="password-input" className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-secondary">Password</label>
           <Link href="/forgot-password" className="text-xs font-semibold text-primary transition-colors hover:text-primary/75">
             Lupa password?
           </Link>
         </div>
         <div className="relative">
           <input
+            id="password-input"
             type={showPass ? "text" : "password"}
             autoComplete="current-password"
+            aria-required="true"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-12 w-full rounded-[10px] border border-input bg-card pl-4 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            required
+            className="h-12 w-full rounded-[10px] border border-input bg-card pl-4 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="button"
             onClick={() => setShowPass(!showPass)}
-            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
+            className="absolute right-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>

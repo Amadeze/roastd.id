@@ -28,6 +28,12 @@ export function AuthFrame({
 
   return (
     <main className="instrument-grid-dark relative min-h-[100dvh] overflow-hidden bg-[var(--obsidian)] p-3 text-white sm:p-5 lg:p-8">
+      <a
+        href="#main-auth-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--primary-foreground)] focus:shadow-lg"
+      >
+        Lewati ke konten utama
+      </a>
       {!reduceMotion ? (
         <motion.div
           data-testid="auth-ambient-scan"
@@ -124,6 +130,7 @@ export function AuthFrame({
         </aside>
 
         <motion.section
+          id="main-auth-content"
           className="flex min-w-0 flex-col bg-[var(--surface)] text-[var(--ink)]"
           initial={reduceMotion ? false : { opacity: 0, x: 24 }}
           animate={reduceMotion ? undefined : { opacity: 1, x: 0 }}

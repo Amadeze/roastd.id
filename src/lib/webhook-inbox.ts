@@ -7,7 +7,7 @@ import { getCurrentDate } from "@/lib/date-utils";
 type TransactionClient = any;
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
-const STUCK_THRESHOLD_MS = 30 * 1000;
+const STUCK_THRESHOLD_MS = 6 * 60 * 1000;
 
 export class PermanentWebhookError extends Error {
   readonly statusCode: number;

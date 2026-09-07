@@ -71,10 +71,13 @@ function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nama Roastery</label>
+        <label htmlFor="roastery-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nama Roastery</label>
         <div className="relative">
           <input
+            id="roastery-name"
             type="text"
+            autoComplete="organization"
+            aria-required="true"
             placeholder="e.g. Senja Roastery"
             value={roasteryName}
             onChange={(e) => {
@@ -84,25 +87,26 @@ function RegisterForm() {
               }
             }}
             className="h-12 w-full rounded-[10px] border border-input bg-card pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            required
           />
           <Store className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Portal Subdomain</label>
+        <label htmlFor="subdomain-input" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Portal Subdomain</label>
         <div className="flex overflow-hidden rounded-[10px] border border-input bg-card transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <div className="border-r border-border bg-muted/55 py-3 pl-4 pr-2 text-sm font-medium text-muted-foreground">
             https://
           </div>
           <input
+            id="subdomain-input"
             type="text"
+            autoComplete="off"
+            aria-required="true"
             placeholder="senja"
             value={subdomain}
             onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
             className="h-12 min-w-0 flex-1 bg-transparent px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/65"
-            required
           />
           <div className="hidden border-l border-border bg-muted/55 py-3 pl-2 pr-4 text-sm font-medium text-muted-foreground sm:block">
             .roastd.id
@@ -114,36 +118,41 @@ function RegisterForm() {
       {!isGoogleMode && (
         <>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email kerja</label>
+            <label htmlFor="register-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email kerja</label>
             <div className="relative">
               <input
+                id="register-email"
                 type="email"
+                autoComplete="email"
+                aria-required="true"
                 placeholder="admin@senjaroastery.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12 w-full rounded-[10px] border border-input bg-card pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                required={!isGoogleMode}
               />
               <AtSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
+            <label htmlFor="register-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
             <div className="relative">
               <input
+                id="register-password"
                 type={showPass ? "text" : "password"}
+                autoComplete="new-password"
+                aria-required="true"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 w-full rounded-[10px] border border-input bg-card pl-10 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                required={!isGoogleMode}
+                className="h-12 w-full rounded-[10px] border border-input bg-card pl-10 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <Key className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
+                className="absolute right-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
