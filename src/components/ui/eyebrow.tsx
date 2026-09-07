@@ -20,16 +20,19 @@ export function Eyebrow({
   className,
   as: Tag = "p",
   id,
+  htmlFor,
 }: {
   children: React.ReactNode;
   tone?: EyebrowTone;
   className?: string;
   as?: React.ElementType;
   id?: string;
+  htmlFor?: string;
 }) {
   return (
     <Tag
       id={id}
+      htmlFor={htmlFor}
       className={cn(
         "font-mono text-[11px] font-bold uppercase tracking-[0.14em]",
         toneClass[tone],

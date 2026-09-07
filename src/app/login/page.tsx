@@ -70,8 +70,9 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Eyebrow tone="neutral" as="label" className="block">Email</Eyebrow>
+        <Eyebrow tone="neutral" as="label" htmlFor="email" className="block">Email</Eyebrow>
         <input
+          id="email"
           type="email"
           autoComplete="email"
           placeholder="admin@roasteryos.com"
@@ -84,13 +85,14 @@ function LoginForm() {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Eyebrow tone="neutral" as="label" className="block">Password</Eyebrow>
+          <Eyebrow tone="neutral" as="label" htmlFor="password" className="block">Password</Eyebrow>
           <Link href="/forgot-password" className="text-xs font-semibold text-primary transition-colors hover:text-primary/75">
             Lupa password?
           </Link>
         </div>
         <div className="relative">
           <input
+            id="password"
             type={showPass ? "text" : "password"}
             autoComplete="current-password"
             placeholder="••••••••"
@@ -102,6 +104,8 @@ function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPass(!showPass)}
+            aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
+            aria-pressed={showPass}
             className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {showPass ? <EyeOff size={16} /> : <Eye size={16} />}

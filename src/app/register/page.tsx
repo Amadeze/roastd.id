@@ -71,9 +71,10 @@ function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nama Roastery</label>
+        <label htmlFor="roastery-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nama Roastery</label>
         <div className="relative">
           <input
+            id="roastery-name"
             type="text"
             placeholder="e.g. Senja Roastery"
             value={roasteryName}
@@ -91,12 +92,13 @@ function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Portal Subdomain</label>
+        <label htmlFor="portal-subdomain" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Portal Subdomain</label>
         <div className="flex overflow-hidden rounded-[10px] border border-input bg-card transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <div className="border-r border-border bg-muted/55 py-3 pl-4 pr-2 text-sm font-medium text-muted-foreground">
             https://
           </div>
           <input
+            id="portal-subdomain"
             type="text"
             placeholder="senja"
             value={subdomain}
@@ -114,10 +116,12 @@ function RegisterForm() {
       {!isGoogleMode && (
         <>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email kerja</label>
+            <label htmlFor="work-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email kerja</label>
             <div className="relative">
               <input
+                id="work-email"
                 type="email"
+                autoComplete="email"
                 placeholder="admin@senjaroastery.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -129,10 +133,14 @@ function RegisterForm() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
+            <label htmlFor="new-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
             <div className="relative">
               <input
+                id="new-password"
                 type={showPass ? "text" : "password"}
+                autoComplete="new-password"
+                minLength={8}
+                aria-describedby="password-requirements"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -143,11 +151,16 @@ function RegisterForm() {
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
+                aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
+                aria-pressed={showPass}
                 className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-[8px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <p id="password-requirements" className="text-[11px] text-muted-foreground">
+              Minimal 8 karakter, dengan satu huruf besar dan satu angka.
+            </p>
           </div>
         </>
       )}
@@ -170,7 +183,7 @@ function RegisterForm() {
           disabled={loading}
           className="flex h-12 w-full items-center justify-center rounded-[10px] bg-primary font-bold text-primary-foreground shadow-[0_12px_28px_-18px_rgba(91,32,17,.7)] transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Mulai 14 Hari Gratis"}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Mulai 21 Hari Gratis"}
         </motion.button>
       </div>
 
