@@ -392,20 +392,20 @@ export function CashierClient({
       </Dialog>
 
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_390px]">
-        <section className="custom-scrollbar min-h-0 overflow-y-auto p-4 pb-24 md:p-6 lg:pb-6" aria-label="Daftar produk">
-          <div className="mx-auto max-w-[1300px]">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <section className="custom-scrollbar min-h-0 overflow-y-auto p-3 pb-24 md:p-4 lg:pb-6" aria-label="Daftar produk">
+          <div className="mx-auto max-w-[1400px]">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
               <label className="relative min-w-0 flex-1">
-                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-secondary" />
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-secondary" />
                 <span className="sr-only">Cari produk</span>
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Cari nama atau kode produk…"
-                  className="h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm outline-none transition focus:border-border focus:ring-2 focus:ring-ink/10"
+                  placeholder="Cari produk…"
+                  className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none transition focus:border-border focus:ring-2 focus:ring-ink/10"
                 />
               </label>
-              <div className="flex flex-1 gap-2 min-w-[240px]">
+              <div className="flex flex-1 gap-2 min-w-[200px]">
                 <label className="flex-1 relative">
                   <span className="sr-only">Pelanggan</span>
                   <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
@@ -517,7 +517,7 @@ export function CashierClient({
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {visibleProducts.map((product) => {
                   const quantity = cart[product.id] ?? 0;
                   const priceResolution = resolveCustomerUnitPrice(
@@ -531,39 +531,36 @@ export function CashierClient({
                   const price = priceResolution.unitPrice;
                   const unavailable = product.stockUnit <= 0;
                   return (
-                    <article key={product.id} className="relative flex min-h-[154px] flex-col rounded-xl border border-border bg-card p-3.5">
+                    <article key={product.id} className="relative flex min-h-[120px] flex-col rounded-xl border border-border bg-card p-3">
                       {quantity > 0 ? (
-                        <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--status-danger)]/100 text-xs font-bold text-white shadow-sm ring-2 ring-white">
+                        <div className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--status-danger)] text-xs font-bold text-white shadow-sm ring-2 ring-white">
                           {quantity}
                         </div>
                       ) : null}
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold uppercase tracking-wide text-ink-secondary">{product.code}</p>
-                        <h2 className="mt-1 line-clamp-2 text-sm font-bold leading-5 text-ink">{product.name}</h2>
-                        <p className={cn("mt-1 text-[11px] font-medium", unavailable ? "text-[var(--status-danger)]" : "text-ink-secondary")}>
-                          {unavailable ? "Stok habis" : `${product.stockUnit} pcs tersedia`}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-ink-secondary">{product.code}</p>
+                        <h2 className="mt-0.5 line-clamp-2 text-xs font-bold leading-4 text-ink">{product.name}</h2>
+                        <p className={cn("mt-1 text-[10px] font-medium", unavailable ? "text-[var(--status-danger)]" : "text-ink-secondary")}>
+                          {unavailable ? "Habis" : `${product.stockUnit} pcs`}
                         </p>
                       </div>
-                      <div className="mt-auto flex items-end justify-between gap-2 pt-3">
-                        <span className="text-xs font-bold tabular-nums text-ink">
+                      <div className="mt-auto flex items-end justify-between gap-1.5 pt-2">
+                        <span className="text-[11px] font-bold tabular-nums text-ink">
                           {formatRupiah(price)}
-                          {priceResolution.priceSource === "CONTRACT" ? (
-                            <span className="ml-1 text-[9px] font-semibold uppercase text-[var(--status-success)]">Kontrak</span>
-                          ) : null}
                         </span>
                         {quantity > 0 ? (
                           <div className="flex items-center rounded-lg border border-border">
-                            <button type="button" onClick={() => changeQuantity(product, -1)} className="flex h-9 w-9 items-center justify-center text-ink hover:bg-surface-sunken" aria-label={`Kurangi ${product.name}`}>
-                              <Minus size={14} />
+                            <button type="button" onClick={() => changeQuantity(product, -1)} className="flex h-9 w-8 items-center justify-center text-ink hover:bg-surface-sunken active:bg-surface-sunken/80" aria-label={`Kurangi ${product.name}`}>
+                              <Minus size={12} />
                             </button>
-                            <span className="w-7 text-center text-xs font-bold tabular-nums">{quantity}</span>
-                            <button type="button" onClick={() => changeQuantity(product, 1)} disabled={quantity >= product.stockUnit} className="flex h-9 w-9 items-center justify-center text-ink hover:bg-surface-sunken disabled:opacity-30" aria-label={`Tambah ${product.name}`}>
-                              <Plus size={14} />
+                            <span className="w-6 text-center text-xs font-bold tabular-nums">{quantity}</span>
+                            <button type="button" onClick={() => changeQuantity(product, 1)} disabled={quantity >= product.stockUnit} className="flex h-9 w-8 items-center justify-center text-ink hover:bg-surface-sunken active:bg-surface-sunken/80 disabled:opacity-30" aria-label={`Tambah ${product.name}`}>
+                              <Plus size={12} />
                             </button>
                           </div>
                         ) : (
-                          <button type="button" onClick={() => changeQuantity(product, 1)} disabled={unavailable} className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white hover:bg-ink disabled:bg-surface-sunken disabled:text-ink-secondary" aria-label={`Tambah ${product.name}`}>
-                            <Plus size={15} />
+                          <button type="button" onClick={() => changeQuantity(product, 1)} disabled={unavailable} className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white hover:bg-ink/90 active:bg-ink/80 disabled:bg-surface-sunken disabled:text-ink-secondary" aria-label={`Tambah ${product.name}`}>
+                            <Plus size={14} />
                           </button>
                         )}
                       </div>
