@@ -22,7 +22,7 @@ import type {
 } from "../types";
 import { DEFAULT_PORTAL_THEME_CONFIG, DEFAULT_SECTION_SPACING, DEFAULT_SECTION_VISIBILITY, DEFAULT_SECTION_ANIMATION, DEFAULT_SECTION_LAYOUT, DEFAULT_SECTION_DECORATION } from "../defaults/default-config";
 import { getSectionDefinition, resolveSectionType } from "../registry";
-import { savePortalThemeDraft, publishPortalTheme, discardPortalThemeChanges } from "../server/actions";
+import { savePortalThemeDraft, publishPortalTheme } from "../server/actions";
 
 function uid(): string {
   return `sec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -613,14 +613,19 @@ export const useCustomizerStore = create<CustomizerStore>((set, get) => ({
     try {
       const { workingDraft } = get();
       const result = await savePortalThemeDraft(workingDraft);
-      if (result.success) {
-        set({
-          initialDraft: structuredClone(workingDraft),
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-        });
+      if (!result.success) {
+        // Error will be shown by the page component's handleSaveDraft toast
+        return;
       }
+      set({
+        initialDraft: structuredClone(workingDraft),
+        isDirty: false,
+        undoStack: [],
+        redoStack: [],
+      });
+    } catch (err) {
+      console.error("[saveDraft]", err);
+      // Error will be shown by the page component's handleSaveDraft toast
     } finally {
       set({ isSaving: false });
     }
@@ -630,6 +635,21 @@ export const useCustomizerStore = create<CustomizerStore>((set, get) => ({
     set({ isPublishing: true });
     try {
       const { workingDraft } = get();
+      // Soft guard: check readiness, warn but do not block
+      try {
+        const res = await fetch("/api/tenant/readiness");
+        if (res.ok) {
+          const readiness = await res.json();
+          if (readiness && readiness.canTransact === false && Array.isArray(readiness.missingCritical) && readiness.missingCritical.length > 0) {
+            const msg = `Toko belum siap transaksi:\n- ${readiness.missingCritical.join("\n- ")}\n\nTetap publish? Toko tetap tayang publik, tapi pembeli akan melihat peringatan.`;
+            if (typeof window !== "undefined" && !window.confirm(msg)) {
+              return;
+            }
+          }
+        }
+      } catch {
+        // ignore readiness fetch errors — do not block publish
+      }
       const saveResult = await savePortalThemeDraft(workingDraft);
       if (!saveResult.success) return;
       await publishPortalTheme();

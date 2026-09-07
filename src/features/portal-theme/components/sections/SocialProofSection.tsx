@@ -12,7 +12,7 @@ interface SocialProofProps {
   typography?: any;
 }
 
-export function SocialProofSection({ settings, blocks }: SocialProofProps) {
+export function SocialProofSection({ blocks }: SocialProofProps) {
   const visibleBlocks = blocks.filter((b) => b.type === "stat" && b.visible !== false);
 
   if (visibleBlocks.length === 0) return null;

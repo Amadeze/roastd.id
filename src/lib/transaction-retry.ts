@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 // Structural so the helper works with both the base PrismaClient and the
 // tenant-scoped extended client (withTenant). Their $transaction overloads
 // differ slightly, so the callback parameter stays untyped.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export type TransactionClient = any;
 
 export type TransactionLike = {

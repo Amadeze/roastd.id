@@ -5,7 +5,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { PortalThemeConfig, PortalSection, PortalColorTokens } from "../types";
+import type { PortalThemeConfig, PortalSection } from "../types";
 import { resolveSectionType } from "../registry";
 import { sanitizeCSS } from "../server/css-sanitizer";
 import { HeroBannerSection } from "./sections/HeroBannerSection";
@@ -338,6 +338,12 @@ export function PortalThemeRenderer({ config, children, isPreview = false, produ
       }}
     >
       <style>{cssVars}</style>
+
+      {isPreview && (
+        <div role="status" aria-live="polite" className="sticky top-0 z-50 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-900 backdrop-blur">
+          Preview — Anda melihat draft. Publish untuk tayang ke publik. Checkout dinonaktifkan di mode ini.
+        </div>
+      )}
 
       {/* Google Fonts */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />

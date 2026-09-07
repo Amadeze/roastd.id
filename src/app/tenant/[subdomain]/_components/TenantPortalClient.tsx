@@ -391,6 +391,11 @@ export function TenantPortalClient({ tenant, isPreviewMode }: TenantPortalClient
   };
 
   return <>
+    {isPreviewMode ? (
+      <div role="status" aria-live="polite" className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-900">
+        Mode Preview — Anda melihat draft yang belum dipublish. Toko publik tetap tayang; checkout dinonaktifkan di sini.
+      </div>
+    ) : null}
     {tenant.b2bAccessInvalid ? (
       <div role="alert" className="border-b border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">
         Link partner tidak valid atau sudah kedaluwarsa. Katalog retail tetap tersedia; minta link baru dari roastery.

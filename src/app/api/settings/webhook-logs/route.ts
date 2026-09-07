@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireRole, requireTenantPrisma } from "@/lib/auth";
 import { isNextRedirectError } from "@/lib/api-auth";
 
@@ -7,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const user = await requireRole("OWNER", "MANAGER");
+    await requireRole("OWNER", "MANAGER");
     const tenantPrisma = await requireTenantPrisma();
 
     const logs = await tenantPrisma.webhookEvent.findMany({

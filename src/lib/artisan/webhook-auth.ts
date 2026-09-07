@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { hashWebhookToken } from "@/lib/artisan/connector-auth";
 import { timingSafeEqualText } from "@/lib/webhook-inbox";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 const TENANT_SELECT = {

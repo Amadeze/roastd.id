@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Coffee, ArrowRight, Check, SlidersHorizontal, ShoppingBag } from "lucide-react";
+import { Coffee, Check, SlidersHorizontal, ShoppingBag } from "lucide-react";
 import { StorefrontImage } from "../StorefrontImage";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -100,7 +100,7 @@ const DEFAULT_COFFEES = [
   },
 ];
 
-export function InteractiveFlavorSection({ settings, blocks, offerings = [] }: InteractiveFlavorProps) {
+export function InteractiveFlavorSection({ settings, offerings = [] }: InteractiveFlavorProps) {
   const title = (settings.title as string) || "Penjelajah Rasa Sensorik";
   const subtitle = (settings.subtitle as string) || "Filter katalog biji kopi hijau & sangrai grosir kami berdasarkan profil rasa sensorik. Pemetaan sensorik interaktif untuk pembeli B2B.";
   const [activeNote, setActiveNote] = useState("all");

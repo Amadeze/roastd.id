@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireCurrentUser, requireTenantPrisma } from "@/lib/auth";
 import { isNextRedirectError } from "@/lib/api-auth";
 import { calculateStorefrontReadiness } from "@/lib/storefront-readiness";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await requireCurrentUser();
     const tenantId = user.tenantId;

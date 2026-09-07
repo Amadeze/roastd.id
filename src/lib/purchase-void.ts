@@ -5,7 +5,7 @@ import { recordAudit } from "@/lib/audit";
 
 // Flexible type: works with both base PrismaClient and tenant-scoped extended
 // client (mengikuti konvensi stock.ts / audit.ts).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 /**

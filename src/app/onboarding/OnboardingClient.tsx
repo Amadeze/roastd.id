@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Check, CreditCard, Loader2, Package, Plus, Settings2, Building2, UploadCloud } from "lucide-react";
+import { ArrowRight, Check, CreditCard, Loader2, Package, Plus, Settings2, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";

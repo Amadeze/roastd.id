@@ -236,8 +236,14 @@ export async function discardPortalThemeChanges(): Promise<ActionResult> {
     const user = await requireRole("OWNER");
     const tenantPrisma = await requireTenantPrisma();
 
-    // Discarding means we don't need to change anything on disk
-    // The client will reload from the persisted draft
+    // Discarding reverts draft to published config
+    const portalTheme = await safeFindPortalTheme(tenantPrisma, user.tenantId);
+    if (portalTheme && portalTheme.publishedConfig) {
+      await safeUpdatePortalTheme(tenantPrisma, user.tenantId, {
+        draftConfig: portalTheme.publishedConfig as Prisma.InputJsonValue,
+      });
+    }
+
     revalidatePath("/settings");
     revalidatePath("/settings/portal-customizer");
     return { success: true };

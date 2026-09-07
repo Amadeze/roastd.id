@@ -1,6 +1,6 @@
 "use server";
 
-import { getIronSession, type IronSession } from "iron-session";
+import { getIronSession } from "iron-session";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
@@ -15,8 +15,6 @@ import {
   layeredIdentifiers,
   resolveClientIdentity,
 } from "@/lib/client-identity";
-
-type AppSession = IronSession<{ user?: SessionUser }>;
 
 // ─── Login ───────────────────────────────────────────────────────────────────
 

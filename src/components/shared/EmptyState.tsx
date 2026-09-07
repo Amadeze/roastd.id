@@ -1,20 +1,4 @@
-import {
-  Package,
-  Clock,
-  Flame,
-  Factory,
-  Plus,
-  Search,
-  FileText,
-  PackageCheck,
-  FileCheck2,
-  WalletCards,
-  Building2,
-  Users,
-  PackageOpen,
-  UserCog,
-  Coffee,
-} from "lucide-react";
+import { Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -45,17 +29,6 @@ export interface EmptyStateProps {
   inline?: boolean;
 }
 
-const DEFAULT_ICONS: Record<string, React.ReactNode> = {
-  supplier: <Building2 size={21} />,
-  pelanggan: <Users size={21} />,
-  produk: <Package size={21} />,
-  kemasan: <PackageOpen size={21} />,
-  supply: <PackageOpen size={21} />,
-  pengguna: <UserCog size={21} />,
-  penawaran: <Coffee size={21} />,
-  default: <Package size={21} />,
-};
-
 export function EmptyState({
   label,
   description,
@@ -73,13 +46,6 @@ export function EmptyState({
   className,
   inline = false,
 }: EmptyStateProps) {
-  // Determine content based on filtered state
-  const finalLabel = isFiltered ? (filteredLabel || `Tidak ada ${label.toLowerCase()} yang cocok.`) : label;
-  const finalDescription = isFiltered ? (filteredDescription || undefined) : description;
-
-  // Resolve icon
-  const resolvedIcon = icon || (typeof label === "string" ? DEFAULT_ICONS[label.toLowerCase()] : null) || <Package size={21} />;
-
   // Action button
   const actionButton = action || (actionLabel && onAction ? (
     <Button

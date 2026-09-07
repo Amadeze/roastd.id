@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Coffee, Plus, Tag, Star } from "lucide-react";
+import { Coffee, Plus, Star } from "lucide-react";
 import { StorefrontImage } from "../StorefrontImage";
 
 interface FeaturedCollectionProps {
@@ -19,7 +19,7 @@ const GRID_COLS: Record<number, string> = {
   4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
 };
 
-export function FeaturedCollectionSection({ settings, typography, products = [], onAddToCart, isPreview }: FeaturedCollectionProps) {
+export function FeaturedCollectionSection({ settings, typography, products = [], onAddToCart }: FeaturedCollectionProps) {
   const title = (settings.title as string) || "Produk Unggulan";
   const subtitle = (settings.subtitle as string) || "";
   const columns = (settings.columns as number) || 4;

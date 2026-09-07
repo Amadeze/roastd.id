@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, MapPin, Calendar, Building2, Award, Leaf, Truck } from "lucide-react";
+import Image from "next/image";
+import { MapPin, Calendar } from "lucide-react";
 import type { PortalSection } from "../../types";
 
 interface TimelineBlock {
@@ -17,19 +18,6 @@ interface TimelineBlock {
     year: string;
     location: string;
   };
-}
-
-function getIcon(iconName: string) {
-  const icons: Record<string, React.ComponentType<{ className?: string; size?: number; style?: React.CSSProperties }>> = {
-    CheckCircle2,
-    MapPin,
-    Calendar,
-    Building2,
-    Award,
-    Leaf,
-    Truck,
-  };
-  return icons[iconName] ?? CheckCircle2;
 }
 
 export function BrandTimelineSection({ section }: { section: PortalSection }) {
@@ -49,9 +37,6 @@ export function BrandTimelineSection({ section }: { section: PortalSection }) {
   const isVertical = settings.layout !== "horizontal";
 
   const renderBlock = (block: TimelineBlock, index: number) => {
-    const { title, subtitle, content, imageUrl, icon, tag, year, location } = block.settings;
-    const Icon = getIcon(icon);
-
     return (
       <div key={block.id} className="relative pl-16">
         <div className="absolute left-6 -top-1 flex h-10 w-10 items-center justify-center rounded-full border-2 bg-[var(--portal-bg)]" style={{ borderColor: "var(--portal-accent)" }}>
@@ -99,12 +84,15 @@ export function BrandTimelineSection({ section }: { section: PortalSection }) {
             </p>
           )}
           {block.settings.imageUrl && (
-            <div className="mt-6 rounded-xl overflow-hidden">
-              <img
+            <div className="mt-6 overflow-hidden rounded-xl">
+              <Image
                 src={block.settings.imageUrl}
                 alt={block.settings.title || "Timeline image"}
-                className="w-full h-auto"
+                width={1600}
+                height={900}
+                className="h-auto w-full"
                 loading="lazy"
+                unoptimized
               />
             </div>
           )}
@@ -114,8 +102,6 @@ export function BrandTimelineSection({ section }: { section: PortalSection }) {
   };
 
   const renderHorizontalBlock = (block: TimelineBlock, index: number) => {
-    const Icon = getIcon(block.settings.icon);
-
     return (
       <div key={block.id} className="flex w-80 flex-col flex-shrink-0">
         <div className="flex flex-col items-center">

@@ -164,7 +164,7 @@ export default async function TenantB2BPortal({ params, searchParams }: TenantPa
   let cuppingResult: any[] = [];
 
   try {
-    const [catalogResult, portalThemeResult, cuppingResult] = await Promise.all([
+    const [catalogResult, portalThemeResult] = await Promise.all([
       loadStorefrontCatalog(prisma, tenant.id, b2bContext ? {
         b2b: {
           customerTier: b2bContext!.customer.tier,
@@ -172,10 +172,10 @@ export default async function TenantB2BPortal({ params, searchParams }: TenantPa
         },
       } : {}),
       loadPortalThemeCompat(tenant.id),
-      loadPublicCuppingSessions(prisma, tenant.id),
     ]);
     catalog = catalogResult;
     portalTheme = portalThemeResult;
+    cuppingResult = await loadPublicCuppingSessions(prisma, tenant.id);
   } catch (catalogError) {
     console.error("[storefront] Failed to load catalog/theme:", catalogError);
     // Continue with empty catalog/theme to prevent total failure

@@ -82,9 +82,8 @@ export function StorefrontImage({
 
   // Compatibility fallback for previously persisted external merchant URLs.
   // New uploads use same-origin or Supabase paths and receive Next optimization.
-  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <img
+    <Image
       {...props}
       src={src}
       alt={alt}
@@ -93,6 +92,7 @@ export function StorefrontImage({
       sizes={sizes}
       loading={loading}
       decoding="async"
+      unoptimized
       fetchPriority={critical ? "high" : undefined}
     />
   );

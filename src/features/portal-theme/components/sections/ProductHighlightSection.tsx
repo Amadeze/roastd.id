@@ -1,6 +1,6 @@
 "use client";
 
-import { Coffee, Plus, Check } from "lucide-react";
+import { Coffee, Plus } from "lucide-react";
 import { StorefrontImage } from "../StorefrontImage";
 
 interface ProductHighlightProps {
@@ -11,7 +11,7 @@ interface ProductHighlightProps {
   isPreview?: boolean;
 }
 
-export function ProductHighlightSection({ settings, typography, products = [], onAddToCart, isPreview }: ProductHighlightProps) {
+export function ProductHighlightSection({ settings, products = [], onAddToCart }: ProductHighlightProps) {
   const showPrice = settings.showPrice !== false;
   const showDescription = settings.showDescription !== false;
   const targetId = settings.productId as string;

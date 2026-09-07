@@ -169,7 +169,7 @@ export function CourierShippingSearch({
     } finally {
       setIsFetchingRates(false);
     }
-  }, [subdomain, cartItems]);
+  }, [subdomain, cartItems, b2bAccessToken]);
 
   // Fetch rates when destination changes
   useEffect(() => {

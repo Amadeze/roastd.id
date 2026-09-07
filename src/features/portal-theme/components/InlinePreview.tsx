@@ -7,7 +7,7 @@
 
 import { useCustomizerStore } from "../client/store";
 import { PortalThemeRenderer } from "./PortalThemeRenderer";
-import { Monitor, Tablet, Smartphone } from "lucide-react";
+import { Tablet, Smartphone } from "lucide-react";
 
 const VIEWPORT_SIZES = {
   desktop: { width: "100%", maxWidth: "100%", height: "calc(100vh - 56px)" },

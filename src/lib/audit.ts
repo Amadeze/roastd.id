@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 // Use a flexible type that works with both base and tenant-scoped Prisma clients
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 type AuditInput = {

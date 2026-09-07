@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { getCurrentDate } from "@/lib/date-utils";
 
 // Use a flexible type that works with both base and tenant-scoped Prisma clients
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 export function createPasswordResetToken() {

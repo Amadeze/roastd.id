@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -202,7 +203,7 @@ export default async function PublicOrderPage({ params }: { params: Promise<{ su
           {submission ? <section className="rounded-xl border border-stone-200 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-black">Pembayaran {destination.label || submission.method}</h2><span className={`rounded-full px-3 py-1 text-xs font-bold ${submission.status === "VERIFIED" ? "bg-emerald-100 text-emerald-800" : submission.status === "REJECTED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{paymentStatusLabel(submission.status)}</span></div>
             {submission.status !== "VERIFIED" ? <>
-              {submission.method === "QRIS" && destination.qrisImageUrl ? <div className="mt-4 flex justify-center rounded-xl border border-stone-200 p-4"><img src={destination.qrisImageUrl} alt={`QRIS ${invoice.tenant.name}`} className="max-h-72 object-contain" /></div> : null}
+              {submission.method === "QRIS" && destination.qrisImageUrl ? <div className="mt-4 flex justify-center rounded-xl border border-stone-200 p-4"><Image src={destination.qrisImageUrl} alt={`QRIS ${invoice.tenant.name}`} width={600} height={600} className="max-h-72 object-contain" unoptimized /></div> : null}
               {submission.method === "TRANSFER" ? <dl className="mt-4 grid gap-2 rounded-lg bg-stone-50 p-4 text-sm"><div><dt className="text-xs text-stone-500">Bank</dt><dd className="font-bold">{destination.bankName}</dd></div><div><dt className="text-xs text-stone-500">Nomor rekening</dt><dd className="font-mono text-lg font-black">{destination.accountNumber}</dd></div><div><dt className="text-xs text-stone-500">Atas nama</dt><dd className="font-bold">{destination.accountHolder}</dd></div></dl> : null}
               {destination.instructions ? <p className="mt-3 text-sm text-stone-600">{destination.instructions}</p> : null}
             </> : <p className="mt-3 text-sm text-emerald-800">Bukti sudah diverifikasi roastery.</p>}

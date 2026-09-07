@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogOut, Coffee, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
@@ -11,7 +10,7 @@ export default async function SuperadminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireRole("SUPERADMIN");
+  await requireRole("SUPERADMIN");
 
   return (
     <AppToastProvider>

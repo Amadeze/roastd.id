@@ -1,5 +1,4 @@
-﻿import { redirect } from "next/navigation";
-import { ArrowRight, Check, Coffee, Monitor, ShieldCheck } from "lucide-react";
+﻿import { ArrowRight, Check, Coffee, Monitor, ShieldCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashStudioVerificationCode } from "@/lib/artisan/connector-auth";

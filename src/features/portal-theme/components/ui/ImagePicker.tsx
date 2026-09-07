@@ -4,6 +4,7 @@
 
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 
@@ -40,10 +41,13 @@ export function ImagePicker({ value, onChange }: ImagePickerProps) {
     <div className="space-y-2">
       {value && (
         <div className="relative group">
-          <img
+          <Image
             src={value}
             alt="Preview"
+            width={800}
+            height={200}
             className="h-20 w-full rounded-lg object-cover"
+            unoptimized
           />
           <button
             onClick={() => onChange("")}

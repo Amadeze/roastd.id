@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Menu, X, Sparkles, Coffee, ArrowRight, ShieldCheck, Activity } from "lucide-react";
+import { ShoppingBag, Menu, X, Coffee, Activity } from "lucide-react";
 import { useModalFocus } from "@/hooks/useModalFocus";
 
 interface HeaderNavProps {

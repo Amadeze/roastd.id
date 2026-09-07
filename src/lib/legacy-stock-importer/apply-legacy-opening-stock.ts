@@ -9,7 +9,7 @@
 // Accounting: inventory-only (no Opening Equity journal on Commit 2);
 // report accounting opening-balance as a separate scope.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 type TransactionClient = any;
 
 import { requireTenantPrisma } from "@/lib/auth";

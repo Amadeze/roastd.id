@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { getCurrentDate } from "@/lib/date-utils";
 
 // Use a flexible type that works with both base and tenant-scoped Prisma clients
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 export const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;

@@ -1,6 +1,6 @@
 import { weightedAverageCost } from "./financial-reporting";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type DecimalLike = any;
 type RoastingBatchInput = {
   inputProductId: string;
