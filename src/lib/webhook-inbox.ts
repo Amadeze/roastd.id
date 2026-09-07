@@ -3,10 +3,11 @@ import crypto from "node:crypto";
 import { getCurrentDate } from "@/lib/date-utils";
 
 // Use a flexible type that works with both base and tenant-scoped Prisma clients
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type TransactionClient = any;
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
+const STUCK_THRESHOLD_MS = 30 * 1000;
 
 export class PermanentWebhookError extends Error {
   readonly statusCode: number;
@@ -72,9 +73,10 @@ export async function claimWebhookEvent(
   if (!existing) throw new Error("Webhook event claim conflict could not be resolved.");
 
   const staleBefore = new Date(now.getTime() - (input.leaseMs ?? DEFAULT_LEASE_MS));
+  const stuckThreshold = new Date(now.getTime() - STUCK_THRESHOLD_MS);
   const retryable =
     existing.status === "FAILED"
-    || (existing.status === "RECEIVED" && existing.receivedAt < staleBefore);
+    || (existing.status === "RECEIVED" && existing.receivedAt < stuckThreshold);
   if (!retryable) {
     return { claimed: false as const, eventId: existing.id, retry: false };
   }

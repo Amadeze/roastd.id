@@ -374,6 +374,10 @@ export async function fulfillInvoiceAtHandover(
     where: { id: invoice.id },
     data: { fulfillmentStatus: "DELIVERED", deliveredAt: now },
   });
+  await tx.fulfillmentTask.updateMany({
+    where: { invoiceId: invoice.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+    data: { status: "COMPLETED", completedAt: now },
+  });
   return { alreadyFulfilled: false, fulfilledReservations: reservations.length };
 }
 

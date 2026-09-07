@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Verify connector belongs to tenant
     const connector = await tenantPrisma.roastdStudio.findFirst({
-      where: { id: connectorId },
+      where: { id: connectorId, tenantId: user.tenantId },
       select: { id: true, tenantId: true, computerName: true, revokedAt: true },
     });
 

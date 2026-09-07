@@ -74,6 +74,14 @@ export async function POST(
     });
 
     await prisma.$transaction(async (tx) => {
+      const currentSubmission = await tx.paymentSubmission.findFirst({
+        where: { id: submission.id },
+        select: { id: true, status: true },
+      });
+      if (!currentSubmission || !canSubmitPaymentProof(currentSubmission.status)) {
+        throw new Error("Bukti pembayaran sudah dikirim atau diproses.");
+      }
+
       const duplicate = await tx.paymentSubmission.findFirst({
         where: {
           tenantId: submission.tenantId,

@@ -329,7 +329,7 @@ export async function updateDraftPO(
   // Update PO + items in transaction
   await prisma.$transaction(async (tx) => {
     // Update PO header
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const updateData: Record<string, any> = {};
     if (input.supplierId) updateData.supplierId = input.supplierId;
     if (input.expectedDate !== undefined) {
@@ -585,11 +585,11 @@ export async function receivePO(
     purchaseCodes.length = 0;
     try {
       await prisma.$transaction(async (tx) => {
-        // Load all previously received quantities per item (matched by productId/packagingId/supplyItemId)
-    const prevPurchases = await tx.purchase.findMany({
-      where: { purchaseOrderId: poId },
-      select: { productId: true, packagingId: true, supplyItemId: true, weightKg: true, quantityUnits: true, supplyQuantity: true },
-    });
+        // Load all previously received quantities per PO line item (matched by purchaseOrderItemId)
+        const prevPurchases = await tx.purchase.findMany({
+          where: { purchaseOrderId: poId },
+          select: { purchaseOrderItemId: true, weightKg: true, quantityUnits: true, supplyQuantity: true },
+        });
 
     for (const [receiptIndex, received] of positiveReceipts.entries()) {
       const poItem = poItemMap.get(received.poItemId)!;
@@ -613,15 +613,9 @@ export async function receivePO(
                   })()
             : "PACKAGING";
 
-      // H12: Prevent over-receipt per item
+      // H12: Prevent over-receipt per PO line item
       const previousForItem = prevPurchases
-        .filter((p) =>
-          isSupply
-            ? p.supplyItemId === poItem.supplyItemId
-            : isProduct
-              ? p.productId === poItem.productId
-              : p.packagingId === poItem.packagingId
-        )
+        .filter((p) => p.purchaseOrderItemId === poItem.id)
         .reduce((sum, p) =>
           sum + (isSupply ? Number(p.supplyQuantity ?? 0) : Number(p.weightKg ?? 0) + (p.quantityUnits ?? 0)), 0);
       const remainingForItem = Number(poItem.quantity) - previousForItem;
@@ -670,6 +664,7 @@ export async function receivePO(
           ].filter(Boolean).join(" · "),
           createdById: userId,
           purchaseOrderId: poId,
+          purchaseOrderItemId: poItem.id,
         },
       });
 
@@ -783,13 +778,7 @@ export async function receivePO(
     // H11: Determine new PO status per-item (all items fully received → RECEIVED)
     const allItemsFullyReceived = po.items.every((item) => {
       const prevForItem = prevPurchases
-        .filter((p) =>
-          item.supplyItemId
-            ? p.supplyItemId === item.supplyItemId
-            : item.productId
-              ? p.productId === item.productId
-              : p.packagingId === item.packagingId
-        )
+        .filter((p) => p.purchaseOrderItemId === item.id)
         .reduce((sum, p) =>
           sum + (item.supplyItemId ? Number(p.supplyQuantity ?? 0) : Number(p.weightKg ?? 0) + (p.quantityUnits ?? 0)), 0);
       const receivedNow = input.items
@@ -868,7 +857,7 @@ export async function getPOList(
 ): Promise<{ items: POListItem[]; total: number }> {
   const { status, search, page = 1, limit = 20 } = filters;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const where: Record<string, any> = {};
   if (status) where.status = status;
   if (search) {

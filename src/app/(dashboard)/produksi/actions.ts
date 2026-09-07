@@ -808,6 +808,7 @@ export async function createProductionBatch(
 
       // 3b. Validasi & hitung HPP setiap komponen supply
       let totalSupplyCost = 0;
+      let nonHppSupplyCost = 0;
       const supplyDetails: Array<{
         supplyItemId: string;
         quantity: number;
@@ -877,6 +878,8 @@ export async function createProductionBatch(
         const totalCost = unitCost * qty;
         if (supplyItem.includeInProductHpp) {
           totalSupplyCost += totalCost;
+        } else {
+          nonHppSupplyCost += totalCost;
         }
         supplyDetails.push({
           supplyItemId: sc.supplyItemId,
@@ -1081,6 +1084,7 @@ export async function createProductionBatch(
         overheadCost,
         outputProduct.name ?? batchCode,
         { tx, tenantId, userId },
+        nonHppSupplyCost,
       );
 
       await recordAudit(tx, {

@@ -1178,6 +1178,13 @@ export async function createProduct(input: CreateProductInput): Promise<ActionRe
                 });
               }
               if (r.supplyItems && r.supplyItems.length > 0) {
+                const supplyItemIds = r.supplyItems.map((item) => item.supplyItemId);
+                const validCount = await tx.inventorySupplyItem.count({
+                  where: { id: { in: supplyItemIds }, tenantId },
+                });
+                if (validCount !== supplyItemIds.length) {
+                  throw new Error("Supply item yang dipilih bukan milik tenant ini.");
+                }
                 await tx.recipeSupplyItem.createMany({
                   data: r.supplyItems.map((item) => ({
                     tenantId,
@@ -1351,6 +1358,13 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
                 });
               }
               if (r.supplyItems && r.supplyItems.length > 0) {
+                const supplyItemIds = r.supplyItems.map((item) => item.supplyItemId);
+                const validCount = await tx.inventorySupplyItem.count({
+                  where: { id: { in: supplyItemIds }, tenantId },
+                });
+                if (validCount !== supplyItemIds.length) {
+                  throw new Error("Supply item yang dipilih bukan milik tenant ini.");
+                }
                 await tx.recipeSupplyItem.createMany({
                   data: r.supplyItems.map((item) => ({
                     tenantId,
@@ -1390,6 +1404,13 @@ export async function updateProduct(input: UpdateProductInput): Promise<ActionRe
                 });
               }
               if (r.supplyItems && r.supplyItems.length > 0) {
+                const supplyItemIds = r.supplyItems.map((item) => item.supplyItemId);
+                const validCount = await tx.inventorySupplyItem.count({
+                  where: { id: { in: supplyItemIds }, tenantId },
+                });
+                if (validCount !== supplyItemIds.length) {
+                  throw new Error("Supply item yang dipilih bukan milik tenant ini.");
+                }
                 await tx.recipeSupplyItem.createMany({
                   data: r.supplyItems.map((item) => ({
                     tenantId,
@@ -1858,6 +1879,21 @@ export async function createOffering(input: OfferingInput): Promise<ActionResult
     });
     const materialError = validateOfferingMaterial(material, parsed.data, tenantId);
     if (materialError) return { success: false, error: materialError };
+
+    if (parsed.data.variants.some((v) => v.supplyItemId)) {
+      const supplyItemIds = parsed.data.variants
+        .map((v) => v.supplyItemId)
+        .filter((id): id is string => !!id);
+      if (supplyItemIds.length > 0) {
+        const validCount = await tp.inventorySupplyItem.count({
+          where: { id: { in: supplyItemIds }, tenantId },
+        });
+        if (validCount !== supplyItemIds.length) {
+          return { success: false, error: "Supply item pada varian bukan milik tenant ini." };
+        }
+      }
+    }
+
     let offering: Awaited<ReturnType<typeof tp.coffeeOffering.create>> | null = null;
     for (let attempt = 0; attempt < 4 && !offering; attempt += 1) {
       const rows = await tp.coffeeOffering.findMany({
@@ -1957,6 +1993,17 @@ export async function updateOffering(input: OfferingInput & { id: string }): Pro
       // Replace strategy: hapus varian lama, tulis ulang dari form.
       await tx.offeringVariant.deleteMany({ where: { offeringId: input.id } });
       if (parsed.data.variants.length > 0) {
+        const variantSupplyItemIds = parsed.data.variants
+          .map((v) => v.supplyItemId)
+          .filter((id): id is string => !!id);
+        if (variantSupplyItemIds.length > 0) {
+          const validCount = await tx.inventorySupplyItem.count({
+            where: { id: { in: variantSupplyItemIds }, tenantId },
+          });
+          if (validCount !== variantSupplyItemIds.length) {
+            throw new Error("Supply item pada varian bukan milik tenant ini.");
+          }
+        }
         await tx.offeringVariant.createMany({
           data: parsed.data.variants.map((variant) => ({
             tenantId,

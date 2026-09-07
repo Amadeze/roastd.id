@@ -506,8 +506,9 @@ export async function postProductionBatch(
   overheadCost: number,
   fgProductName: string,
   options: PostingOptions = {},
+  nonHppSupplyCost: number = 0,
 ): Promise<string> {
-  const totalCost = totalRbCost + packagingCost + supplyCost + laborCost + overheadCost;
+  const totalCost = totalRbCost + packagingCost + supplyCost + nonHppSupplyCost + laborCost + overheadCost;
   const lines: PostingLine[] = [
     { accountCode: "1-1220", debit: totalCost, credit: 0 },
     { accountCode: "1-1210", debit: 0, credit: totalRbCost },
@@ -515,6 +516,10 @@ export async function postProductionBatch(
   ];
   if (supplyCost > 0) {
     lines.push({ accountCode: getSupplyInventoryAccount("PACKAGING"), debit: 0, credit: supplyCost });
+  }
+  if (nonHppSupplyCost > 0) {
+    lines.push({ accountCode: getSupplyInventoryAccount("PACKAGING"), debit: 0, credit: nonHppSupplyCost });
+    lines.push({ accountCode: getSupplyIssueExpenseAccount("CONSUMABLE", false), debit: nonHppSupplyCost, credit: 0 });
   }
   if (laborCost > 0) {
     lines.push({ accountCode: "5-1010", debit: 0, credit: laborCost });

@@ -48,9 +48,10 @@ export function CashierClient({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [customerOptions, setCustomerOptions] = useState(customers);
-  const [customerId, setCustomerId] = useState(
-    () => customerOptions.find((customer) => customer.tier === "RETAIL")?.id ?? customerOptions[0]?.id ?? "",
-  );
+  const [customerId, setCustomerId] = useState(() => {
+    const walkIn = customerOptions.find((c) => c.name.toLowerCase().startsWith("walk-in"));
+    return walkIn?.id ?? customerOptions[0]?.id ?? "";
+  });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [operationKey, setOperationKey] = useState(() => crypto.randomUUID());

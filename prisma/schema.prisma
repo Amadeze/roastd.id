@@ -1245,8 +1245,10 @@ model Purchase {
   createdAt   DateTime @default(now())
 
   // PO Lite reference (nullable untuk backward compat)
-  purchaseOrderId String?
-  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId     String?
+  purchaseOrder       PurchaseOrder?     @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderItemId String? // PO line item level tracking
+  purchaseOrderItem   PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
 
   supplier   Supplier             @relation(fields: [supplierId], references: [id])
   product    Product?             @relation(fields: [productId], references: [id])
@@ -1264,6 +1266,7 @@ model Purchase {
   @@index([tenantId, status])
   @@index([tenantId, paymentStatus, dueDate])
   @@index([tenantId, purchaseOrderId])
+  @@index([tenantId, purchaseOrderItemId])
   @@map("purchases")
 }
 
@@ -2521,6 +2524,8 @@ model PurchaseOrderItem {
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  purchases Purchase[]
 
   @@index([tenantId, purchaseOrderId])
   @@map("purchase_order_items")
