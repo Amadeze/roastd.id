@@ -1,10 +1,36 @@
 export const dynamic = "force-dynamic";
 
-import { LandingClient } from "./LandingClient";
+import nextDynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { fetchLandingSocialProof } from "./_actions/landing-social-proof";
 
 const BASE_URL = "https://roastd.id";
+
+const LandingClient = nextDynamic(
+  () => import("./LandingClient").then((m) => ({ default: m.LandingClient })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-[#05090D]">
+        <div className="mx-auto max-w-[1180px] px-3 sm:px-5 lg:p-8">
+          <div className="grid min-h-[calc(100vh-2rem)] grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="flex flex-col justify-center space-y-6 py-12">
+              <div className="h-4 w-48 animate-pulse rounded bg-white/10" />
+              <div className="space-y-4">
+                <div className="h-12 w-full max-w-md animate-pulse rounded bg-white/10" />
+                <div className="h-12 w-full max-w-sm animate-pulse rounded bg-white/10" />
+              </div>
+              <div className="h-12 w-48 animate-pulse rounded bg-white/10" />
+            </div>
+            <div className="hidden items-center justify-center lg:flex">
+              <div className="h-[400px] w-full max-w-[560px] animate-pulse rounded-2xl bg-white/5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+);
 
 export const metadata: Metadata = {
   title: "roastd.id — Roastery Operating System + Studio",

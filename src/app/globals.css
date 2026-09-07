@@ -888,10 +888,16 @@
   font-family: var(--font-dm-sans), sans-serif;
 }
 
-.ros-workspace :where(button, a, input, textarea, select):focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--instrument) 74%, white);
-  outline-offset: 2px;
-}
+  .ros-workspace :where(button, a, input, textarea, select):focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--instrument) 74%, white);
+    outline-offset: 2px;
+  }
+
+  /* Global focus ring for all interactive elements outside ros-workspace (auth, landing, etc.) */
+  :where(button, a, input, textarea, select):focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ring) 70%, white);
+    outline-offset: 2px;
+  }
 
 @media (prefers-reduced-motion: reduce) {
   *,

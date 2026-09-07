@@ -348,10 +348,12 @@ export function AppShellV2({
 
   const primaryHrefs =
     userRole === "CASHIER"
-      ? ["/dashboard", "/kasir", "/penjualan"]
+      ? ["/dashboard", "/kasir", "/penjualan", "/inventory"]
       : userRole === "OPERATOR"
         ? ["/dashboard", "/inventory", "/roasting", "/produksi"]
-        : MOBILE_PRIMARY_HREFS;
+        : userRole === "FINANCE"
+          ? ["/dashboard", "/keuangan", "/laporan/keuangan", "/inventory"]
+          : ["/dashboard", "/inventory", "/kasir", "/roasting"];
   const mobileItems = primaryHrefs
     .map((href) => visibleItems.find((item) => item.href === href))
     .filter((item): item is AppNavLink => Boolean(item));
@@ -403,7 +405,13 @@ export function AppShellV2({
       </div>
 
       {/* Kolom utama */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main id="main-dashboard-content" className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <a
+          href="#main-dashboard-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-14 focus:left-4 focus:z-50 focus:rounded-md focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--primary-foreground)] focus:shadow-lg"
+        >
+          Lewati ke konten utama
+        </a>
         {/* Strip atas tipis */}
         <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-surface/80 px-4 backdrop-blur-sm sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
