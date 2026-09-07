@@ -2,14 +2,14 @@
 // PORTAL PREVIEW ROUTE � Renders portal with draft config for iframe preview
 // =============================================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getValidatedCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantPortalTheme } from "@/features/portal-theme/resolver";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const user = await getValidatedCurrentUser();
     if (!user || user.role !== "OWNER") {

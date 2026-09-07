@@ -103,8 +103,11 @@ export function PODetail({ poId, onClose, onUpdate }: PODetailProps) {
   const handleCancel = async () => {
     const result = await cancelPOAction(poId);
     if (result.success) {
+      toast.success("PO berhasil dibatalkan.");
       onUpdate();
       loadDetail();
+    } else {
+      toastSafe.error(result.error || "Gagal membatalkan PO.");
     }
   };
 

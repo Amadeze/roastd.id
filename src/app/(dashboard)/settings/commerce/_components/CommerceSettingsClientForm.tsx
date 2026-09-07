@@ -7,7 +7,7 @@ import { saveCommerceSettings } from "../actions";
 
 export function CommerceSettingsClientForm({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {

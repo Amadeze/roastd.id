@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { Building2, ImagePlus, Pencil, Plus, QrCode, Trash2, WalletCards } from "lucide-react";
 import { deleteTenantPaymentMethod, saveTenantPaymentMethod, setTenantPaymentMethodActive } from "./actions";
@@ -153,7 +154,7 @@ export function PaymentMethodsClient({ initialMethods }: { initialMethods: Metho
           ) : (
             <label className="block text-xs font-semibold text-stone-600">Gambar QRIS
               <span className="mt-1.5 flex min-h-28 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-stone-300 bg-stone-50 text-stone-500">
-                {form.qrisImageUrl ? <img src={form.qrisImageUrl} alt="Pratinjau QRIS" className="max-h-48 w-auto object-contain" /> : <span className="flex items-center gap-2 text-sm"><ImagePlus size={18} /> {isUploading ? "Mengunggah..." : "Pilih JPG, PNG, atau WebP"}</span>}
+                {form.qrisImageUrl ? <Image src={form.qrisImageUrl} alt="Pratinjau QRIS" width={240} height={192} className="h-auto max-h-48 w-auto object-contain" unoptimized /> : <span className="flex items-center gap-2 text-sm"><ImagePlus size={18} /> {isUploading ? "Mengunggah..." : "Pilih JPG, PNG, atau WebP"}</span>}
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={isUploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadQris(file); }} />
               </span>
             </label>

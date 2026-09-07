@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { updateTenantSettings } from "../actions";
 import { toast } from "sonner";
 import { toastSafe } from "@/lib/toast";
 import { Tenant } from "@prisma/client";
-import { Save, ExternalLink, Upload, Phone, Plus, Trash2, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Save, ExternalLink, Upload, Phone, RotateCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,12 +54,12 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
   const portalPath = `/tenant/${tenant.subdomain}`;
   const [name, setName] = useState(tenant.name || "");
   const [timezone, setTimezone] = useState(tenant.timezone || "Asia/Jakarta");
-  const [themeColor, setThemeColor] = useState(tenant.themeColor || "amber");
-  const [heroText, setHeroText] = useState(tenant.heroText || "");
+  const [themeColor] = useState(tenant.themeColor || "amber");
+  const [heroText] = useState(tenant.heroText || "");
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || "");
   const [heroImageUrl, setHeroImageUrl] = useState(tenant.heroImageUrl || "");
   const [backgroundImageUrl, setBackgroundImageUrl] = useState(tenant.backgroundImageUrl || "");
-  const [layoutStyle, setLayoutStyle] = useState(tenant.layoutStyle || "modern");
+  const [layoutStyle] = useState(tenant.layoutStyle || "modern");
   const [currentOrigin, setCurrentOrigin] = useState("http://localhost:3000");
 
   useEffect(() => {
@@ -70,33 +70,33 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
   const storefrontUrl = tenant.subdomain ? tenantStorefrontUrl(tenant.subdomain, currentOrigin) : portalPath;
   
   // Theme Engine
-  const [fontFamily, setFontFamily] = useState(tenant.fontFamily || "sans");
-  const [themeMode, setThemeMode] = useState(tenant.themeMode || "light");
-  const [borderRadius, setBorderRadius] = useState(tenant.borderRadius || "md");
-  const [animationStyle, setAnimationStyle] = useState(tenant.animationStyle || "subtle");
-  const [animationDirection, setAnimationDirection] = useState(tenant.animationDirection || "up");
-  const [iconStyle, setIconStyle] = useState(tenant.iconStyle || "regular");
+  const [fontFamily] = useState(tenant.fontFamily || "sans");
+  const [themeMode] = useState(tenant.themeMode || "light");
+  const [borderRadius] = useState(tenant.borderRadius || "md");
+  const [animationStyle] = useState(tenant.animationStyle || "subtle");
+  const [animationDirection] = useState(tenant.animationDirection || "up");
+  const [iconStyle] = useState(tenant.iconStyle || "regular");
   
   // New Fields
   const [whatsappNumber, setWhatsappNumber] = useState(tenant.whatsappNumber || "");
   const [contactEmail, setContactEmail] = useState(tenant.contactEmail || "");
   const [instagramHandle, setInstagramHandle] = useState(tenant.instagramHandle || "");
-  const [aboutText, setAboutText] = useState(tenant.aboutText || "");
-  const [catalogTitle, setCatalogTitle] = useState(tenant.catalogTitle || "");
-  const [catalogSubtitle, setCatalogSubtitle] = useState(tenant.catalogSubtitle || "");
-  const [footerText, setFooterText] = useState(tenant.footerText || "");
+  const [aboutText] = useState(tenant.aboutText || "");
+  const [catalogTitle] = useState(tenant.catalogTitle || "");
+  const [catalogSubtitle] = useState(tenant.catalogSubtitle || "");
+  const [footerText] = useState(tenant.footerText || "");
 
   // Dynamic Landing Page Content
-  const [problemStatement, setProblemStatement] = useState(tenant.problemStatement || "");
-  const [solutionStatement, setSolutionStatement] = useState(tenant.solutionStatement || "");
-  const [uspText, setUspText] = useState(tenant.uspText || "");
-  const [features, setFeatures] = useState<any[]>(
+  const [problemStatement] = useState(tenant.problemStatement || "");
+  const [solutionStatement] = useState(tenant.solutionStatement || "");
+  const [uspText] = useState(tenant.uspText || "");
+  const [features] = useState<any[]>(
     Array.isArray(tenant.features) ? tenant.features : []
   );
-  const [testimonials, setTestimonials] = useState<any[]>(
+  const [testimonials] = useState<any[]>(
     Array.isArray(tenant.testimonials) ? tenant.testimonials : []
   );
-  const [faqs, setFaqs] = useState<any[]>(
+  const [faqs] = useState<any[]>(
     Array.isArray(tenant.faqs) ? tenant.faqs : []
   );
 
@@ -130,30 +130,6 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
   const [isUploading, setIsUploading] = useState<{ logo: boolean; hero: boolean; background: boolean }>({ logo: false, hero: false, background: false });
 
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const heroInputRef = useRef<HTMLInputElement>(null);
-  const backgroundInputRef = useRef<HTMLInputElement>(null);
-
-  const THEMES = [
-    { id: "amber", label: "Roast Copper", hex: "var(--stage-roasting)" },
-    { id: "blue", label: "Steel Blue", hex: "var(--stage-neutral)" },
-    { id: "emerald", label: "Verdigris", hex: "var(--stage-inventory)" },
-    { id: "rose", label: "Burgundy", hex: "var(--status-danger)" },
-    { id: "violet", label: "Mulberry", hex: "var(--stage-sales)" },
-    { id: "zinc", label: "Graphite", hex: "var(--ink-secondary)" },
-  ];
-
-  const LAYOUTS = [
-    { id: "heritage", label: "The Heritage Craft (Classic & Artisanal)" },
-    { id: "neomodern", label: "Neo-Modernist (Sleek & Minimalist)" },
-    { id: "cyber", label: "Cyber-Barista (High-Tech & Futuristic)" },
-    { id: "botanical", label: "Botanical Laboratory (Organic & Eco-Friendly)" },
-    { id: "editorial", label: "The Roaster's Diary (Editorial & Storytelling)" },
-    { id: "liquid", label: "Liquid Symphony (Interactive & Sensory-Focused)" },
-    { id: "industrial", label: "Industrial Alchemy (Gritty & Bold)" },
-    { id: "club", label: "Coffee Club (Subscription & Community)" },
-    { id: "luxury", label: "Luxury Reserve (Elite & Ultra-Premium)" },
-    { id: "playful", label: "Playful Brew (Vibrant & Pop Art)" },
-  ];
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "logo" | "hero" | "background") => {
     const file = e.target.files?.[0];
@@ -178,8 +154,8 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
       } else {
         throw new Error(data.error);
       }
-    } catch (e: any) {
-      toastSafe.error("Upload failed: " + e.message);
+    } catch (error: any) {
+      toastSafe.error("Upload failed: " + error.message);
     } finally {
       setIsUploading(prev => ({ ...prev, [type]: false }));
     }
@@ -207,7 +183,7 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
       } else {
         toastSafe.error(data.message);
       }
-    } catch (e) {
+    } catch {
       toast.error("Koneksi ke Midtrans gagal.");
     } finally {
       setIsTestingMidtrans(false);
@@ -217,7 +193,7 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
   async function handleSave() {
     setIsSaving(true);
     try {
-      await updateTenantSettings(tenant.id, {
+      const result = await updateTenantSettings(tenant.id, {
         name,
         timezone,
         themeColor,
@@ -253,10 +229,14 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
         showOnLanding,
         landingDisplayName,
       });
+      if (!result.success) {
+        toastSafe.error(result.error || "Gagal menyimpan pengaturan.");
+        return;
+      }
       toast.success("Pengaturan berhasil disimpan.");
       setRefreshKey(prev => prev + 1);
-    } catch (e: any) {
-      toastSafe.error("Failed to save settings: " + (e?.message || String(e)));
+    } catch (error: any) {
+      toastSafe.error("Failed to save settings: " + (error?.message || String(error)));
     } finally {
       setIsSaving(false);
     }
@@ -297,7 +277,7 @@ export function SettingsClient({ tenant }: { tenant: ExtendedTenant }) {
             <div className="flex items-center gap-4">
               {logoUrl && (
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-white shadow-sm border border-slate-100 flex items-center justify-center">
-                  <img src={logoUrl} alt="Logo" loading="lazy" decoding="async" className="w-full h-full object-contain" />
+                  <Image src={logoUrl} alt="Logo" width={64} height={64} className="h-full w-full object-contain" unoptimized />
                 </div>
               )}
               <div className="flex-1">

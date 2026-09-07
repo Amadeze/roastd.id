@@ -67,7 +67,7 @@ export async function applyOpeningStockAction(
   rawRows: LegacyStockRawRow[],
   operationKey: string,
 ): Promise<OpeningStockResult> {
-  const user = await requireRole("OWNER", "MANAGER");
+  await requireRole("OWNER", "MANAGER");
   const tenantId = await getCurrentTenantId();
   const userId = await getSystemUserId();
 

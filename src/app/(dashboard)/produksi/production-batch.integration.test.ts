@@ -20,7 +20,7 @@ const TEST_TENANT_ID = "test-tenant";
 const TEST_USER_ID = "test-system-user";
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __testPrismaClient: PrismaClient | undefined;
 }
 

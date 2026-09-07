@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, Factory, Plus } from "lucide-react";
+import { Search, Factory } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";

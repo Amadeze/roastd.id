@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Flame, Clock, Thermometer, ArrowDown, ChevronDown, ChevronUp,
-  Package, Scale, TrendingDown, CheckCircle, AlertCircle,
+  Flame, ChevronDown, ChevronUp,
+  Package, Scale, TrendingDown,
   Factory, Coffee, FlaskConical, CopyPlus, Activity,
 } from "lucide-react";
 import {

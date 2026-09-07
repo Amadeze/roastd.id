@@ -41,8 +41,6 @@ export function StockAdjustmentDrawer({
   onPendingChange,
   items,
 }: StockAdjustmentDrawerProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -64,7 +62,6 @@ export function StockAdjustmentDrawer({
   const unitSuffix = selectedItem?.unitLabel ?? (isUnit ? "Unit" : "Kg");
 
   async function onSubmit(data: FormValues) {
-    setIsSubmitting(true);
     onPendingChange?.(true);
 
     try {
@@ -90,7 +87,6 @@ export function StockAdjustmentDrawer({
     } catch (err: any) {
       toastSafe.error(err.message || "Gagal memproses form");
     } finally {
-      setIsSubmitting(false);
       onPendingChange?.(false);
     }
   }

@@ -2,11 +2,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, FileText, Download, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Upload, Download, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 import type {
@@ -121,7 +120,6 @@ export function LegacyImportWizard() {
   // Step 1 state
   const [file, setFile] = useState<File | null>(null);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
-  const [fileSize, setFileSize] = useState(0);
 
   // Step 2/3 state
   const [rawRows, setRawRows] = useState<LegacyStockRawRow[]>([]);
@@ -146,7 +144,6 @@ export function LegacyImportWizard() {
     setRawRows([]);
     setDryRun(null);
     setApplyResult(null);
-    setFileSize(selected.size);
 
     if (!selected.name.toLowerCase().match(/\.(csv|xlsx)$/)) {
       setFileErrors(["Format file tidak didukung. Gunakan .csv atau .xlsx"]);
@@ -347,7 +344,7 @@ function Step1Upload({
 
       {file && (
         <div className="flex justify-end gap-2">
-          <Button size="sm" onClick={onNext} disabled={isParsing}>
+          <Button size="sm" onClick={onNext} disabled={isParsing || !canProceed}>
             Lanjut ke Validasi
           </Button>
         </div>

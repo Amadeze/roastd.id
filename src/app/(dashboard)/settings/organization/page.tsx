@@ -9,11 +9,7 @@ export default async function OrganizationSettingsPage() {
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
   if (!tenant) throw new Error("Tenant not found.");
 
-  const {
-    midtransServerKey,
-    artisanWebhookToken: _artisanWebhookToken,
-    ...safeTenant
-  } = tenant;
+  const { midtransServerKey, ...safeTenant } = tenant;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, Target, X, Flame, Plus } from "lucide-react";
+import { Search, Target, X, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { toastSafe } from "@/lib/toast";
 import {

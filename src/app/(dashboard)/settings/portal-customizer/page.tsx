@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
-  Monitor, Tablet, Smartphone, Eye, Save, Check,
-  ChevronLeft, Palette, LayoutGrid, Droplet, Type,
+  Monitor, Tablet, Smartphone, Eye, Save,
+  ChevronLeft, Palette,
   Undo2, Redo2, Sparkles, RotateCcw, Loader2, ArrowLeft,
-  Home, Store, FileText, Settings, Menu, Zap, Layers,
+  Home, Store, FileText, Settings, Menu, Layers,
   Shield, AlertCircle, CheckCircle2, TrendingUp,
 } from "lucide-react";
 import { useCustomizerStore } from "@/features/portal-theme/client/store";
@@ -279,12 +279,20 @@ export default function PortalCustomizerPage() {
 
           {readiness && (
             <div
-              className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold border ${getReadinessColor(readiness.score)}`}
+              className={`hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold border ${getReadinessColor(readiness.score)}`}
               title={`${readiness.missingCritical.length} critical, ${readiness.missingWarning.length} warning`}
             >
               {getReadinessIcon(readiness.score)}
               <span>{getReadinessLabel(readiness.score)}</span>
               <span className="font-mono">{readiness.score}</span>
+            </div>
+          )}
+          {readiness && (
+            <div className="sm:hidden">
+              <div className="flex items-center gap-2 rounded-xl bg-gray-800 border border-gray-700 px-2 py-1 text-xs font-bold text-white">
+                <span className={`h-2 w-2 rounded-full ${readiness.score >= 70 ? "bg-emerald-400" : readiness.score >= 50 ? "bg-amber-400" : "bg-red-400"}`} />
+                {readiness.score}
+              </div>
             </div>
           )}
           {readinessLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
@@ -349,6 +357,54 @@ export default function PortalCustomizerPage() {
               </button>
             ))}
           </div>
+
+          {/* Readiness — always visible above tabs content, soft guard */}
+          {readiness && (
+            <div className="border-b border-gray-800 bg-gray-950/40 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 shrink-0">
+                    <svg width={48} height={48} className="-rotate-90">
+                      <circle cx={24} cy={24} r={18} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={4} />
+                      <circle
+                        cx={24}
+                        cy={24}
+                        r={18}
+                        fill="none"
+                        stroke={readiness.score >= 90 ? "#10b981" : readiness.score >= 70 ? "#f59e0b" : readiness.score >= 50 ? "#f97316" : "#ef4444"}
+                        strokeWidth={4}
+                        strokeLinecap="round"
+                        strokeDasharray={2 * Math.PI * 18}
+                        strokeDashoffset={2 * Math.PI * 18 - (readiness.score / 100) * 2 * Math.PI * 18}
+                        style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center font-mono text-xs font-black text-white">{readiness.score}</span>
+                  </div>
+                  <div>
+                    <p className={`text-xs font-bold ${readiness.score >= 90 ? "text-emerald-400" : readiness.score >= 70 ? "text-amber-400" : "text-red-400"}`}>{getReadinessLabel(readiness.score)}</p>
+                    <p className="text-[11px] text-gray-400">{readiness.canTransact ? "Siap transaksi" : `${readiness.missingCritical.length} kritis belum siap`}</p>
+                  </div>
+                </div>
+                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${readiness.canTransact ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border border-amber-500/30"}`}>
+                  {readiness.canTransact ? "GO" : "SOFT"}
+                </span>
+              </div>
+              {!readiness.canTransact && readiness.missingCritical.length > 0 && (
+                <p className="mt-2 text-[11px] leading-relaxed text-amber-300/80">
+                  Perlu: {readiness.missingCritical.join(" · ")}
+                </p>
+              )}
+              {readiness.missingWarning.length > 0 && (
+                <p className="mt-1 text-[11px] leading-relaxed text-white/40">
+                  Saran: {readiness.missingWarning.slice(0, 3).join(" · ")}
+                </p>
+              )}
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${readiness.score}%`, background: readiness.score >= 90 ? "#10b981" : readiness.score >= 70 ? "#f59e0b" : "#ef4444" }} />
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto flex flex-col min-h-0 custom-scrollbar">
             {activeTab === "tema" && (

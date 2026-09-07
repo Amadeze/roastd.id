@@ -5,7 +5,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import { resolveTestDatabaseUrl } from "../../../../../test/setup/test-database-guard";
 import { saveCommerceSettings } from "./actions";
-import { withTenant } from "@/lib/prisma";
 
 const integrationEnabled = process.env.RUN_INTEGRATION === "true";
 const suite = integrationEnabled ? describe : describe.skip;
@@ -13,16 +12,6 @@ const suite = integrationEnabled ? describe : describe.skip;
 const TENANT_A = "ship-tenant-a";
 const TENANT_B = "ship-tenant-b";
 
-const NORMALIZED_ORIGIN = {
-  providerId: "574",
-  label: "Cipete Selatan, Cilandak, Jakarta Selatan, DKI Jakarta, 12410",
-  province: "DKI Jakarta",
-  city: "Jakarta Selatan",
-  district: "Cilandak",
-  subdistrict: "Cipete Selatan",
-  postalCode: "12410",
-  issuedAt: Date.now(),
-};
 
 const authState = vi.hoisted(() => ({ tenantId: "ship-tenant-a" }));
 
@@ -52,17 +41,6 @@ vi.mock("@/lib/shipping/origin-token", () => ({
   verifyOriginSelectionToken: mockVerifyToken,
 }));
 
-function buildFormData(values: Record<string, string | string[]>): FormData {
-  const fd = new FormData();
-  for (const [key, value] of Object.entries(values)) {
-    if (Array.isArray(value)) {
-      for (const v of value) fd.append(key, v);
-    } else {
-      fd.set(key, value);
-    }
-  }
-  return fd;
-}
 
 suite("tenant shipping settings (real PostgreSQL)", () => {
   let client: PrismaClient;
