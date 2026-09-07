@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,6 +18,9 @@ import {
   ChevronsUpDown,
   Check,
   Package,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createInvoice } from "../../penjualan/actions";
@@ -28,6 +31,15 @@ import { resolveCustomerUnitPrice } from "@/lib/sale-intent";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { StandardDrawer } from "@/components/StandardDrawer";
+import {
+  addToOutbox,
+  createOutboxTransactionId,
+  getOutboxCount,
+  loadPendingTransactions,
+  removeFromOutbox,
+  type OutboxTransaction,
+  updateOutboxTransaction,
+} from "@/lib/kasir/offline-outbox";
 import { WorkspaceNav } from "@/components/layout/WorkspaceNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -62,6 +74,75 @@ export function CashierClient({
   const [stockDrawerOpen, setStockDrawerOpen] = useState(false);
   const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
   const [isCustomerSubmitting, setIsCustomerSubmitting] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  const syncPendingTransactions = useCallback(async () => {
+    if (syncing || !navigator.onLine) return;
+    const pending = loadPendingTransactions();
+    if (pending.length === 0) return;
+
+    setSyncing(true);
+    let successCount = 0;
+    for (const tx of pending) {
+      if (!navigator.onLine) break;
+      updateOutboxTransaction(tx.id, { syncStatus: "SYNCING", syncAttempts: tx.syncAttempts + 1, lastSyncAt: new Date().toISOString() });
+
+      try {
+        const result = await createInvoice({
+          operationKey: tx.operationKey,
+          customerId: tx.customerId,
+          items: tx.items,
+          invoiceDiscount: tx.invoiceDiscount,
+          tax: tx.tax,
+          taxType: tx.taxType,
+          status: tx.status,
+          paymentMethod: tx.paymentMethod as PaymentMethod,
+          notes: tx.notes,
+        });
+
+        if (result.success) {
+          removeFromOutbox(tx.id);
+          successCount++;
+        } else {
+          updateOutboxTransaction(tx.id, { syncStatus: "FAILED", syncError: result.error });
+        }
+      } catch {
+        updateOutboxTransaction(tx.id, { syncStatus: "FAILED", syncError: "Network error" });
+      }
+    }
+    setPendingCount(getOutboxCount());
+    setSyncing(false);
+    if (successCount > 0) {
+      toast.success(`${successCount} transaksi berhasil di-sync.`);
+      router.refresh();
+    }
+  }, [syncing, router]);
+
+  useEffect(() => {
+    const handleOnline = () => { setIsOnline(true); syncPendingTransactions(); };
+    const handleOffline = () => setIsOnline(false);
+
+    setIsOnline(navigator.onLine);
+    setPendingCount(getOutboxCount());
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [syncPendingTransactions]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (navigator.onLine) {
+        setPendingCount(getOutboxCount());
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const selectedCustomer = customerOptions.find((customer) => customer.id === customerId);
   const visibleProducts = useMemo(() => {
@@ -122,6 +203,35 @@ export function CashierClient({
 
     setSubmitting(true);
     try {
+      if (!navigator.onLine) {
+        const outboxTx: OutboxTransaction = {
+          id: createOutboxTransactionId(),
+          operationKey,
+          createdAt: new Date().toISOString(),
+          customerId,
+          items: cartRows.map((row) => ({
+            productId: row.product.id,
+            quantity: row.quantity,
+            discount: 0,
+          })),
+          invoiceDiscount: 0,
+          tax: 0,
+          taxType: "NONE",
+          status: "PAID",
+          paymentMethod,
+          notes: "Penjualan offline via Kasir roastd.id",
+          syncStatus: "PENDING",
+          syncAttempts: 0,
+        };
+        addToOutbox(outboxTx);
+        setPendingCount(getOutboxCount());
+        setCart({});
+        setMobileCartOpen(false);
+        setOperationKey(crypto.randomUUID());
+        toast.warning("Tidak ada koneksi. Transaksi disimpan dan akan di-sync saat online.");
+        return;
+      }
+
       const result = await createInvoice({
         operationKey,
         customerId,
@@ -135,11 +245,39 @@ export function CashierClient({
         taxType: "NONE",
         status: "PAID",
         paymentMethod,
-        notes: "Penjualan offline melalui Kasir roastd.id",
+        notes: "Penjualan via Kasir roastd.id",
       });
 
       if (!result.success) {
-        toast.error(result.error);
+        if (!navigator.onLine) {
+          const outboxTx: OutboxTransaction = {
+            id: createOutboxTransactionId(),
+            operationKey,
+            createdAt: new Date().toISOString(),
+            customerId,
+            items: cartRows.map((row) => ({
+              productId: row.product.id,
+              quantity: row.quantity,
+              discount: 0,
+            })),
+            invoiceDiscount: 0,
+            tax: 0,
+            taxType: "NONE",
+            status: "PAID",
+            paymentMethod,
+            notes: "Penjualan offline via Kasir roastd.id (retry)",
+            syncStatus: "PENDING",
+            syncAttempts: 0,
+          };
+          addToOutbox(outboxTx);
+          setPendingCount(getOutboxCount());
+          setCart({});
+          setMobileCartOpen(false);
+          setOperationKey(crypto.randomUUID());
+          toast.warning("Gagal mengirim. Transaksi disimpan untuk di-sync nanti.");
+        } else {
+          toast.error(result.error);
+        }
         return;
       }
 
@@ -163,6 +301,38 @@ export function CashierClient({
         stage="sales"
         actions={
           <div className="flex items-center gap-3 px-2 text-xs font-semibold text-white/70">
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                onClick={syncPendingTransactions}
+                disabled={syncing || !isOnline}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[8px] border px-2.5 py-1.5 transition",
+                  isOnline
+                    ? "border-[var(--status-success)]/50 text-[var(--status-success)] hover:bg-[var(--status-success)]/10"
+                    : "border-[var(--status-danger)]/50 text-[var(--status-danger)]",
+                  syncing && "animate-pulse",
+                )}
+                title={isOnline ? `${pendingCount} pending - klik untuk sync` : "Offline - sync saat online"}
+              >
+                {syncing ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={13} />
+                )}
+                {pendingCount} pending
+              </button>
+            )}
+            <span
+              className={cn(
+                "flex items-center gap-1.5",
+                isOnline ? "text-[var(--status-success)]" : "text-[var(--status-danger)]",
+              )}
+              title={isOnline ? "Online" : "Offline"}
+            >
+              {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
+              {isOnline ? "Online" : "Offline"}
+            </span>
             <Link
               href="/penjualan"
               className="hidden items-center gap-1.5 rounded-[8px] border border-white/15 px-2.5 py-1.5 transition hover:border-white/35 hover:text-white sm:flex"
@@ -504,15 +674,41 @@ export function CashierClient({
             <span className="truncate text-sm font-bold tracking-tight text-white">{formatRupiah(total)}</span>
           </div>
         </button>
-        <button
-          type="button"
-          onClick={checkout}
-          disabled={submitting || cartRows.length === 0 || !customerId}
-          className="flex h-full min-h-14 items-center justify-center gap-1.5 bg-[var(--status-success)] px-5 text-sm font-bold text-white hover:bg-[var(--status-success)]/100 disabled:bg-ink disabled:text-ink-secondary transition-colors"
-        >
-          {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-          {submitting ? "Proses..." : "Bayar"}
-        </button>
+        <div className="flex items-center gap-2 pr-2">
+          {pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={syncPendingTransactions}
+              disabled={syncing || !isOnline}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors",
+                isOnline ? "bg-[var(--status-success)]/80 hover:bg-[var(--status-success)]" : "bg-[var(--status-danger)]/80",
+                syncing && "animate-pulse",
+              )}
+              title={`${pendingCount} transaksi pending - sync`}
+            >
+              {syncing ? <RefreshCw size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            </button>
+          )}
+          <span
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full",
+              isOnline ? "bg-[var(--status-success)]/80 text-white" : "bg-[var(--status-danger)]/80 text-white",
+            )}
+            title={isOnline ? "Online" : "Offline"}
+          >
+            {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
+          </span>
+          <button
+            type="button"
+            onClick={checkout}
+            disabled={submitting || cartRows.length === 0 || !customerId}
+            className="flex h-full min-h-14 items-center justify-center gap-1.5 bg-[var(--status-success)] px-5 text-sm font-bold text-white hover:bg-[var(--status-success)]/100 disabled:bg-ink disabled:text-ink-secondary transition-colors"
+          >
+            {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
+            {submitting ? "Proses..." : "Bayar"}
+          </button>
+        </div>
       </div>
 
       <StandardDrawer
