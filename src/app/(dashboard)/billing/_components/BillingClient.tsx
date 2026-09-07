@@ -98,7 +98,7 @@ export default function BillingClient({ tenant }: { tenant: BillingTenant }) {
                   <span className="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                     {tenant.subscriptionTier} PLAN
                   </span>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-md ${tenant.subscriptionStatus === 'ACTIVE' && !isExpired ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-md ${tenant.subscriptionStatus === 'ACTIVE' && !isExpired ? 'bg-success-light text-success-base' : 'bg-danger-mid text-danger-base'}`}>
                     {isExpired ? 'EXPIRED' : tenant.subscriptionStatus}
                   </span>
                 </div>
@@ -108,9 +108,9 @@ export default function BillingClient({ tenant }: { tenant: BillingTenant }) {
                 {isTrial ? (
                   <p className="text-sm text-[var(--text-secondary)] flex items-center gap-2">
                     {isExpired ? (
-                      <><AlertTriangle size={16} className="text-red-500"/> Your trial has expired. Upgrade to continue using all features.</>
+                      <><AlertTriangle size={16} className="text-status-danger"/> Your trial has expired. Upgrade to continue using all features.</>
                     ) : (
-                      <><Clock size={16} className="text-amber-500"/> {daysRemaining} days remaining in your trial.</>
+                      <><Clock size={16} className="text-status-warning"/> {daysRemaining} days remaining in your trial.</>
                     )}
                   </p>
                 ) : (

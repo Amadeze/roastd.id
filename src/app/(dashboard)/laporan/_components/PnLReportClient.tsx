@@ -196,7 +196,7 @@ export function PnLReportClient({ report, hideLayout }: PnLReportClientProps) {
       {(() => {
         const warning = reconciliationWarning(report.reconciliationDifference);
         return warning ? (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+          <div className="mb-6 rounded-lg border border-danger-mid bg-danger-light px-4 py-3 text-xs font-medium text-danger-base">
             <strong>{warning.split(":")[0]}:</strong>{" "}
             {warning.split(": ")[1]}
           </div>

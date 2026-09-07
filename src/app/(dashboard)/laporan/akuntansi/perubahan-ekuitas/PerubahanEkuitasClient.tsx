@@ -76,7 +76,7 @@ export function PerubahanEkuitasClient({
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+        <div className="rounded-xl border border-danger-mid bg-danger-light p-4 text-sm text-danger-base">{error}</div>
       )}
 
       {data && (

@@ -57,6 +57,26 @@
   --color-text-tertiary: var(--text-tertiary);
   --color-moss-light: var(--moss-soft);
 
+  /* Status semantic colors — reference existing tokens, auto dark-mode aware */
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+
+  /* Status palette with opacity steps for backgrounds/borders */
+  --color-danger-light: #FEE2E2;
+  --color-danger-mid: #FECACA;
+  --color-danger-base: #8C2F39;
+  --color-danger-dark: #7F232E;
+  --color-success-light: #D1FAE5;
+  --color-success-mid: #A7F3D0;
+  --color-success-base: #2B7567;
+  --color-success-dark: #235E53;
+  --color-warning-light: #FEF3C7;
+  --color-warning-mid: #FDE68A;
+  --color-warning-base: #8A5B0A;
+  --color-warning-dark: #744210;
+
   /* Transitional utility bridge: legacy feature families keep their own meaning. */
   --color-amber-50: #FBF4DF;
   --color-amber-100: #F5E6B9;

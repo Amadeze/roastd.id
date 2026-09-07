@@ -93,7 +93,7 @@ export function ArusKasClient({
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+        <div className="rounded-xl border border-danger-mid bg-danger-light p-4 text-sm text-danger-base">{error}</div>
       )}
 
       {data && grouped && (
@@ -111,7 +111,7 @@ export function ArusKasClient({
                       <span className={`text-sm ${isTotal(r.label) ? "font-semibold text-stone-800" : "text-stone-600"}`}>
                         {r.label}
                       </span>
-                      <span className={`font-mono text-sm ${r.amount >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      <span className={`font-mono text-sm ${r.amount >= 0 ? "text-status-success" : "text-status-danger"}`}>
                         {r.amount >= 0 ? formatRupiah(r.amount) : `(${formatRupiah(Math.abs(r.amount))})`}
                       </span>
                     </div>

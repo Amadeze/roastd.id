@@ -6,8 +6,8 @@ import type { GlIntegrityIssue } from "../actions";
 import { Button } from "@/components/ui/button";
 
 const SEVERITY_CONFIG: Record<string, { icon: any; className: string }> = {
-  ERROR: { icon: AlertCircle, className: "border-red-200 bg-red-50 text-red-700" },
-  WARNING: { icon: AlertTriangle, className: "border-amber-200 bg-amber-50 text-amber-700" },
+  ERROR: { icon: AlertCircle, className: "border-danger-mid bg-danger-light text-danger-base" },
+  WARNING: { icon: AlertTriangle, className: "border-warning-mid bg-warning-light text-warning-base" },
   INFO: { icon: Info, className: "border-blue-200 bg-blue-50 text-blue-700" },
 };
 
@@ -25,13 +25,13 @@ export function IntegrityClient({ issues }: { issues: GlIntegrityIssue[] }) {
           <p className="text-xs text-stone-400">Total Issue</p>
           <p className="text-2xl font-bold text-stone-800">{issues.length}</p>
         </div>
-        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 min-w-[140px]">
-          <p className="text-xs text-red-500">Error</p>
-          <p className="text-2xl font-bold text-red-600">{errorCount}</p>
+        <div className="rounded-xl border border-danger-mid bg-danger-light px-5 py-4 min-w-[140px]">
+          <p className="text-xs text-status-danger">Error</p>
+          <p className="text-2xl font-bold text-danger-base">{errorCount}</p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 min-w-[140px]">
-          <p className="text-xs text-amber-500">Warning</p>
-          <p className="text-2xl font-bold text-amber-600">{warnCount}</p>
+        <div className="rounded-xl border border-warning-mid bg-warning-light px-5 py-4 min-w-[140px]">
+          <p className="text-xs text-status-warning">Warning</p>
+          <p className="text-2xl font-bold text-warning-base">{warnCount}</p>
         </div>
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 min-w-[140px]">
           <p className="text-xs text-blue-500">Info</p>

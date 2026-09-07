@@ -73,7 +73,7 @@ export function LabaDitahanClient({
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+        <div className="rounded-xl border border-danger-mid bg-danger-light p-4 text-sm text-danger-base">{error}</div>
       )}
 
       {data && (
@@ -85,14 +85,14 @@ export function LabaDitahanClient({
             </div>
             <div className="flex items-center justify-between px-5 py-4">
               <span className="text-sm text-stone-600">Laba (Rugi) Bersih Periode</span>
-              <span className={`font-mono text-sm font-semibold ${data.netIncome >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+              <span className={`font-mono text-sm font-semibold ${data.netIncome >= 0 ? "text-status-success" : "text-status-danger"}`}>
                 {data.netIncome >= 0 ? formatRupiah(data.netIncome) : `(${formatRupiah(Math.abs(data.netIncome))})`}
               </span>
             </div>
             {data.dividends > 0 && (
               <div className="flex items-center justify-between px-5 py-4">
                 <span className="text-sm text-stone-600">Dividen</span>
-                <span className="font-mono text-sm text-red-500">({formatRupiah(data.dividends)})</span>
+                <span className="font-mono text-sm text-status-danger">({formatRupiah(data.dividends)})</span>
               </div>
             )}
             <div className="flex items-center justify-between px-5 py-4 bg-stone-50 border-t border-stone-200 font-semibold">
